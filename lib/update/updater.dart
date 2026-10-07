@@ -66,7 +66,7 @@ class Updater {
   Updater({
     required this.installed,
     required this.dir,
-    this.repo = 'mennovanhout/nspanelpro-flutter',
+    this.repo = 'perfrankling/nspanelpro-flutter',
     Fetch? fetch,
     Download? download,
     AdbShell? shell,
