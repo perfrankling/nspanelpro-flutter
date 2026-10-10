@@ -71,10 +71,14 @@ void main() {
     // lit by the boolean, in violet, while its own script is off
     final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
     expect(icons.first.color, const Color(0xFFA78BFA));
+    // icon only: 60% of the shorter side of the button's content box
+    final box = tester.getSize(
+      find.ancestor(of: find.byType(Icon).first, matching: find.byType(LayoutBuilder)).first,
+    );
     expect(
       icons.first.size,
-      48,
-      reason: 'the icon takes the room the name had',
+      closeTo(box.shortestSide * .6, .01),
+      reason: 'the icon is sized to the button',
     );
     expect(icons.last.color, isNot(const Color(0xFFA78BFA)));
 

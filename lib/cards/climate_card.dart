@@ -112,15 +112,21 @@ class _ClimateCardState extends State<ClimateCard> with EchoMixin {
     return now != null ? 'Now ${fmt(now, 1)}° · $label' : label;
   }
 
-  void _openSheet(HaState? s) {
+  void _openSheet(HaState? _) => showControlSheet(
+        context,
+        spec: () => _sheet(widget.env.states.get(entity)),
+        listen: widget.env.states.listen(entity),
+      );
+
+  /// The sheet, as of now: called again on every state change while it is open.
+  SheetSpec _sheet(HaState? s) {
     final modes = (s?.attributes['hvac_modes'] as List? ?? const [])
         .whereType<String>()
         .where(_hvacLabels.containsKey)
         .take(4)
         .toList();
     final r = _range(s);
-    showControlSheet(
-      context,
+    return SheetSpec(
       title: c.titleOr(friendlyName(s, entity)),
       state: _stateText(s),
       value: display(_entityValue(s)),

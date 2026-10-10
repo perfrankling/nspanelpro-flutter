@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 import '../ha/states.dart';
+import 'custom_icons.dart';
 
 /// `mdi:lightbulb-on` -> the glyph. Unknown names fall back rather than
 /// throwing, because an icon typo in a config should never blank a card.
@@ -75,3 +76,12 @@ const weatherIcons = {
   'windy-variant': 'mdi:weather-windy',
   'exceptional': 'mdi:alert-circle-outline',
 };
+
+/// An icon by name, as a widget: an MDI glyph, or a `custom:` icon drawn from
+/// its path (util/custom_icons.dart). A custom name the table lacks falls back
+/// like an unknown MDI name does.
+Widget iconWidget(String? name, {IconData? fallback, required double size, required Color color}) {
+  final p = customIconPath(name);
+  if (p != null) return PathIcon(p, size: size, color: color);
+  return Icon(mdi(name, fallback), size: size, color: color);
+}

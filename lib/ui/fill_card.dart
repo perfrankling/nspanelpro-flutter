@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../util/color.dart';
+import '../util/custom_icons.dart';
 import 'theme.dart';
 
 class ChipSpec {
@@ -30,6 +31,9 @@ class FillCard extends StatefulWidget {
     required this.title,
     required this.sub,
     this.fromTop = false,
+    this.horizontal = false,
+    this.solid = false,
+    this.dragSign = 1,
     this.on = false,
     this.broken = false,
     this.leading,
@@ -49,6 +53,20 @@ class FillCard extends StatefulWidget {
   final double fill;
   final double fillOpacity;
   final bool fromTop;
+
+  /// fill_direction: horizontal. The fill runs from the left, a sideways drag
+  /// sets it (the vertical one goes to whatever holds the card), and the name
+  /// sits beside the icon on a plate in the card's own colour, centred in the
+  /// height the chips leave. With [fromTop] the block is a cover's blind,
+  /// coming in from the left.
+  final bool horizontal;
+
+  /// fill_style: solid - the accent as given, opaque, instead of the tint.
+  final bool solid;
+
+  /// +1: a drag the way the fill grows raises the value. A sideways cover
+  /// passes -1: its fill is the blind, and dragging right brings it down.
+  final double dragSign;
   final bool on;
   final bool broken;
   final Widget? leading;
@@ -71,31 +89,44 @@ class FillCard extends StatefulWidget {
 class _FillCardState extends State<FillCard> {
   bool _dragging = false;
   double _start = 0;
-  double _dy = 0;
+  double _d = 0;
   double _last = 0;
+
+  /// Whether the drag has moved along its axis. A recogniser can win the arena
+  /// by default when the finger lifts with nothing else claiming it - a
+  /// vertical swipe across a horizontal card - and that is not a drag: it
+  /// must not commit anything.
+  bool _moved = false;
 
   bool get _interactive => !widget.broken;
 
   void _onDragStart(DragStartDetails d) {
     _dragging = true;
     _start = widget.fill;
-    _dy = 0;
+    _d = 0;
     _last = widget.fill;
-    HapticFeedback.selectionClick();
+    _moved = false;
     setState(() {});
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
-    _dy += d.delta.dy;
-    final travel = widget.dragTravel ?? widget.height;
-    _last = (_start - _dy / travel).clamp(0.0, 1.0);
+    // _d is the drag in the direction the fill grows: right, or up
+    final step = widget.horizontal ? d.delta.dx : -d.delta.dy;
+    if (step == 0 && !_moved) return;
+    if (!_moved) HapticFeedback.selectionClick();
+    _moved = true;
+    _d += step;
+    final travel = widget.dragTravel ?? (widget.horizontal ? context.size?.width : null) ?? widget.height;
+    _last = (_start + widget.dragSign * _d / travel).clamp(0.0, 1.0);
     widget.onDragValue?.call(_last);
   }
 
   void _onDragEnd(DragEndDetails d) {
     _dragging = false;
-    HapticFeedback.lightImpact();
-    widget.onDragEnd?.call(_last);
+    if (_moved) {
+      HapticFeedback.lightImpact();
+      widget.onDragEnd?.call(_last);
+    }
     setState(() {});
   }
 
@@ -108,6 +139,8 @@ class _FillCardState extends State<FillCard> {
   Widget build(BuildContext context) {
     final stops = tintStops(widget.accent);
     final canDrag = _interactive && widget.onDragValue != null;
+    final vDrag = canDrag && !widget.horizontal;
+    final hDrag = canDrag && widget.horizontal;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -123,10 +156,14 @@ class _FillCardState extends State<FillCard> {
               widget.onLongPress!();
             }
           : null,
-      onVerticalDragStart: canDrag ? _onDragStart : null,
-      onVerticalDragUpdate: canDrag ? _onDragUpdate : null,
-      onVerticalDragEnd: canDrag ? _onDragEnd : null,
-      onVerticalDragCancel: canDrag ? _onDragCancel : null,
+      onVerticalDragStart: vDrag ? _onDragStart : null,
+      onVerticalDragUpdate: vDrag ? _onDragUpdate : null,
+      onVerticalDragEnd: vDrag ? _onDragEnd : null,
+      onVerticalDragCancel: vDrag ? _onDragCancel : null,
+      onHorizontalDragStart: hDrag ? _onDragStart : null,
+      onHorizontalDragUpdate: hDrag ? _onDragUpdate : null,
+      onHorizontalDragEnd: hDrag ? _onDragEnd : null,
+      onHorizontalDragCancel: hDrag ? _onDragCancel : null,
       child: Opacity(
         opacity: widget.broken ? .45 : 1,
         child: Container(
@@ -145,17 +182,24 @@ class _FillCardState extends State<FillCard> {
                 duration: _dragging ? Duration.zero : const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
                 builder: (_, v, child) => FractionalTranslation(
-                  translation: widget.fromTop ? Offset(0, -v) : Offset(0, 1 - v),
+                  translation: widget.horizontal
+                      ? (widget.fromTop ? Offset(-v, 0) : Offset(v - 1, 0))
+                      : (widget.fromTop ? Offset(0, -v) : Offset(0, 1 - v)),
                   child: child,
                 ),
                 child: TweenAnimationBuilder<double>(
                   tween: Tween(end: widget.fillOpacity),
                   duration: const Duration(milliseconds: 180),
                   builder: (_, o, _) => _FillBlock(
-                    strong: stops.strong.withValues(alpha: stops.strong.a * o),
-                    weak: stops.weak.withValues(alpha: stops.weak.a * o),
+                    strong: widget.solid
+                        ? widget.accent.withValues(alpha: o)
+                        : stops.strong.withValues(alpha: stops.strong.a * o),
+                    weak: widget.solid
+                        ? widget.accent.withValues(alpha: o)
+                        : stops.weak.withValues(alpha: stops.weak.a * o),
                     line: widget.accent.withValues(alpha: o),
                     fromTop: widget.fromTop,
+                    horizontal: widget.horizontal,
                   ),
                 ),
               ),
@@ -169,7 +213,7 @@ class _FillCardState extends State<FillCard> {
                 ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-                child: Column(
+                child: widget.horizontal ? _sideways() : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -202,12 +246,82 @@ class _FillCardState extends State<FillCard> {
       ),
     );
   }
+
+  /// The horizontal layout: icon and name on one plate, the value on another,
+  /// both in the card's own colour so they only show where the fill runs under
+  /// them, centred in the height above the chips. On a card too low for the
+  /// plates they overflow evenly up and down rather than off the bottom.
+  Widget _sideways() => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: OverflowBox(
+              minHeight: 0,
+              maxHeight: double.infinity,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                      decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.leading != null) widget.leading!,
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
+                                Text(widget.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Spacer(),
+                  if (widget.value != null)
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                      decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(16)),
+                      child: widget.value,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (widget.chips.isNotEmpty)
+            ChipRow(chips: widget.chips, on: widget.on, opaque: widget.opaqueChips, horizontal: true),
+          if (widget.chips2.isNotEmpty)
+            ChipRow(chips: widget.chips2, on: widget.on, opaque: widget.opaqueChips, horizontal: true),
+        ],
+      );
+}
+
+/// How many chip rows a horizontal card has room for, in order: each is 56px
+/// plus a 12px gap, and the plate row keeps 56px of the height inside the
+/// padding. A vertical card shows them all, as it always has.
+int chipRowsThatFit(double height, {required bool horizontal}) {
+  if (!horizontal) return 2;
+  final room = height - 36 - 56;
+  return room < 68 ? 0 : (room < 136 ? 1 : 2);
 }
 
 class _FillBlock extends StatelessWidget {
-  const _FillBlock({required this.strong, required this.weak, required this.line, required this.fromTop});
+  const _FillBlock({
+    required this.strong,
+    required this.weak,
+    required this.line,
+    required this.fromTop,
+    this.horizontal = false,
+  });
   final Color strong, weak, line;
-  final bool fromTop;
+  final bool fromTop, horizontal;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -215,22 +329,26 @@ class _FillBlock extends StatelessWidget {
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
+              // strongest at the level edge: the top, or sideways the right
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: horizontal ? Alignment.centerRight : Alignment.topCenter,
+                end: horizontal ? Alignment.centerLeft : Alignment.bottomCenter,
                 colors: [strong, weak],
               ),
             ),
           ),
           // the level itself, unmistakable at arm's length
-          Positioned(
-            left: 0,
-            right: 0,
-            top: fromTop ? null : 0,
-            bottom: fromTop ? 0 : null,
-            height: 3,
-            child: ColoredBox(color: line),
-          ),
+          if (horizontal)
+            Positioned(top: 0, bottom: 0, right: 0, width: 3, child: ColoredBox(color: line))
+          else
+            Positioned(
+              left: 0,
+              right: 0,
+              top: fromTop ? null : 0,
+              bottom: fromTop ? 0 : null,
+              height: 3,
+              child: ColoredBox(color: line),
+            ),
         ],
       );
 }
@@ -242,13 +360,20 @@ const subStyle = TextStyle(
 
 /// The big number in the top-right of a control card: `68` and a smaller `%`.
 class ValueText extends StatelessWidget {
-  const ValueText(this.value, {super.key, this.unit = '', this.size = 40});
+  const ValueText(this.value, {super.key, this.unit = '', this.size = 40, this.color = Ns.text, this.caption});
   final String value;
   final String unit;
   final double size;
 
+  /// Ns.text, or grey for a muted player.
+  final Color color;
+
+  /// A line under the number: the media card's `0–30` while the scale is zoomed.
+  final String? caption;
+
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final number = Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Text.rich(
           TextSpan(children: [
@@ -259,7 +384,7 @@ class ValueText extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     letterSpacing: -.8,
                     height: 1,
-                    color: Ns.text,
+                    color: color,
                     fontFeatures: Ns.tabular,
                     shadows: Ns.shadow)),
             if (unit.isNotEmpty)
@@ -268,38 +393,62 @@ class ValueText extends StatelessWidget {
                   style: TextStyle(
                       fontSize: size / 2,
                       fontWeight: FontWeight.w600,
-                      color: Ns.text.withValues(alpha: .65),
+                      color: color.withValues(alpha: .65),
                       shadows: Ns.shadow)),
           ]),
         ),
       );
+    if (caption == null) return number;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        number,
+        const SizedBox(height: 4),
+        Text(caption!, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600, shadows: Ns.shadow)),
+      ],
+    );
+  }
 }
 
 /// The rounded square that holds a card's icon.
 class IconBox extends StatelessWidget {
-  const IconBox(this.icon, {super.key, this.on = false, this.color});
+  const IconBox(this.icon, {super.key, this.on = false, this.color, this.name});
   final IconData icon;
   final bool on;
   final Color? color;
 
+  /// The configured name, when it may be a custom: icon drawn from a path;
+  /// [icon] is what shows when it is not one.
+  final String? name;
+
   @override
-  Widget build(BuildContext context) => Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: on ? .16 : .10),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(icon, size: 30, color: color ?? Ns.text),
-      );
+  Widget build(BuildContext context) {
+    final path = customIconPath(name);
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: on ? .16 : .10),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: path != null
+          ? Center(child: PathIcon(path, size: 30, color: color ?? Ns.text))
+          : Icon(icon, size: 30, color: color ?? Ns.text),
+    );
+  }
 }
 
 /// A row of 56px chips - presets, transport, favourites.
 class ChipRow extends StatelessWidget {
-  const ChipRow({super.key, required this.chips, this.on = false, this.opaque = false});
+  const ChipRow({super.key, required this.chips, this.on = false, this.opaque = false, this.horizontal = false});
   final List<ChipSpec> chips;
   final bool on;
   final bool opaque;
+
+  /// The card's drag axis: a chip claims that one only, so a drag started on
+  /// a chip never moves the level and the other axis still reaches the pager.
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +461,7 @@ class ChipRow extends StatelessWidget {
         children: [
           for (var i = 0; i < chips.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
-            Expanded(child: _Chip(spec: chips[i], bg: bg)),
+            Expanded(child: _Chip(spec: chips[i], bg: bg, horizontal: horizontal)),
           ],
         ],
       ),
@@ -321,9 +470,10 @@ class ChipRow extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.spec, required this.bg});
+  const _Chip({required this.spec, required this.bg, this.horizontal = false});
   final ChipSpec spec;
   final Color bg;
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -336,7 +486,8 @@ class _Chip extends StatelessWidget {
               },
         // Claim the gestures the card would otherwise take from a chip: a
         // drag or hold that starts on a button should not move the level.
-        onVerticalDragStart: (_) {},
+        onVerticalDragStart: horizontal ? null : (_) {},
+        onHorizontalDragStart: horizontal ? (_) {} : null,
         onLongPress: () {},
         child: Opacity(
           opacity: spec.disabled ? .35 : 1,

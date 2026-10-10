@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -7,20 +8,16 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import '../config/dashboard.dart';
 import '../ha/states.dart';
 import '../ui/info_shell.dart';
+import '../ui/sheet.dart';
 import '../ui/theme.dart';
 import '../util/color.dart';
 import '../util/icons.dart';
+import 'actions.dart';
+import 'cover_card.dart';
+import 'echo.dart';
 import 'env.dart';
-
-/// What to call for a bare entity, by domain. Anything not listed toggles.
-const _service = {
-  'script': ('script', 'turn_on'),
-  'scene': ('scene', 'turn_on'),
-  'automation': ('automation', 'trigger'),
-  'button': ('button', 'press'),
-  'input_button': ('input_button', 'press'),
-  'vacuum': ('vacuum', 'start'),
-};
+import 'light_card.dart';
+import 'media_card.dart';
 
 const _domainIcons = {
   'script': 'mdi:script-text-outline',
@@ -53,6 +50,9 @@ class _ButtonCardState extends State<ButtonCard> {
   late final List<_Btn> _btns = _items().map(_Btn.new).toList();
   final _timers = <Timer>[];
 
+  /// The echo windows of the sheets a long-press opens, one per entity.
+  final _echoes = <String, (EchoBox, EchoBox)>{};
+
   List<CardConfig> _items() {
     final list = c['buttons'] is List && c.listOr('buttons').isNotEmpty
         ? c.maps('buttons')
@@ -82,11 +82,70 @@ class _ButtonCardState extends State<ButtonCard> {
       ? item['show_name'] as bool
       : c.boolOr('show_name', true);
 
-  /// Never more columns than buttons: the row is always shared by the buttons
-  /// that are in it, and the compact styling belongs to three across.
+  double _iconScale(CardConfig item) =>
+      (item['icon_scale'] as num?)?.toDouble() ?? c.numOr('icon_scale', 1);
+
+  /// 1 to 4 across, and never more columns than buttons: the row is always
+  /// shared by the buttons in it, and the compact styling belongs to three
+  /// and four across.
   int get _columns {
     if (_btns.isEmpty) return 1;
-    return c.intOr('columns', 2).clamp(1, 3).clamp(1, _btns.length);
+    return c.intOr('columns', 2).clamp(1, 4).clamp(1, _btns.length);
+  }
+
+  /// color_attribute: the button's colour, read from an attribute of
+  /// color_entity (default: the button's own entity). Black, none or empty
+  /// mean "not painted" - a black button on this card reads as a hole.
+  /// `colors` maps names to the owner's palette, case-insensitively; a name it
+  /// does not list is used as it is. Text goes dark on a light colour.
+  ({Color bg, Color fg})? _paint(CardConfig item) {
+    final attr = item.str('color_attribute');
+    if (attr == null) return null;
+    final id = item.str('color_entity') ?? item.str('entity');
+    final raw = id == null ? null : widget.env.states.get(id)?.attributes[attr];
+    final name = raw == null ? '' : '$raw'.trim();
+    final low = name.toLowerCase();
+    if (name.isEmpty || low == 'black' || low == 'none') return null;
+    final map = c['colors'] is Map ? (c['colors'] as Map) : const {};
+    Object? mapped;
+    for (final e in map.entries) {
+      if ('${e.key}'.toLowerCase() == low) mapped = e.value;
+    }
+    final bg = parseColour(mapped != null ? '$mapped' : name);
+    if (bg == null) return null;
+    return (bg: bg, fg: luminance255(bg) > 150 ? const Color(0xFF14161A) : Colors.white);
+  }
+
+  /// long_press, per button or for the card. The app has no HA dialog to
+  /// open, so `more-info` - and the old default, `more_info` - open the same
+  /// full-screen control as `sheet` for a light, cover or media player, and
+  /// do nothing for anything else.
+  String _longPressFor(CardConfig item) {
+    if (item.str('entity') == null) return 'none';
+    final lp = item.str('long_press') ?? c.str('long_press');
+    if (lp != null) return lp;
+    return c.boolOr('more_info', true) ? 'more-info' : 'none';
+  }
+
+  void _longPress(CardConfig item) {
+    if (_longPressFor(item) == 'none') return;
+    final entity = item.str('entity')!;
+    final env = widget.env;
+    final cfg = <String, dynamic>{'entity': entity, if (c['accent'] != null) 'accent': c['accent']};
+    final (echo, tilt) = _echoes.putIfAbsent(entity, () => (EchoBox(), EchoBox()));
+    void changed() {}
+    SheetSpec Function()? spec;
+    switch (entity.split('.').first) {
+      case 'light':
+        spec = () => LightLogic(env, cfg).sheet(echo, changed);
+      case 'cover':
+        spec = () => CoverLogic(env, cfg).sheet(echo, tilt, changed);
+      case 'media_player':
+        spec = () => MediaLogic(env, cfg).sheet(echo, changed);
+    }
+    if (spec == null) return;
+    if (c.boolOr('haptics', true)) HapticFeedback.mediumImpact();
+    showControlSheet(context, spec: spec, listen: env.states.listen(entity));
   }
 
   void _later(VoidCallback fn, int ms) =>
@@ -98,28 +157,6 @@ class _ButtonCardState extends State<ButtonCard> {
       t.cancel();
     }
     super.dispose();
-  }
-
-  void _fire(CardConfig item) {
-    final explicit = item.str('service');
-    final entity = item.str('entity');
-    String domain, service;
-    if (explicit != null && explicit.contains('.')) {
-      final parts = explicit.split('.');
-      domain = parts[0];
-      service = parts[1];
-    } else {
-      final by = entity == null ? null : _service[entity.split('.').first];
-      domain = by?.$1 ?? 'homeassistant';
-      service = by?.$2 ?? 'toggle';
-    }
-    final data = <String, dynamic>{
-      ...?(item['data'] as Map?)?.cast<String, dynamic>(),
-    };
-    if (entity != null && !data.containsKey('entity_id')) {
-      data['entity_id'] = entity;
-    }
-    widget.env.conn.callService(domain, service, data);
   }
 
   void _press(_Btn b) {
@@ -135,7 +172,7 @@ class _ButtonCardState extends State<ButtonCard> {
       return;
     }
     b.armed = false;
-    _fire(b.item);
+    fireItem(widget.env, b.item);
     setState(() => b.fired = true);
     _later(() {
       if (mounted) setState(() => b.fired = false);
@@ -148,6 +185,7 @@ class _ButtonCardState extends State<ButtonCard> {
       for (final b in _btns) ...[
         b.item.str('entity'),
         b.item.str('state_entity'),
+        b.item.str('color_entity'),
       ],
     ].whereType<String>().toList();
     final accent = parseHex(c.str('accent')) ?? Ns.mint;
@@ -175,61 +213,82 @@ class _ButtonCardState extends State<ButtonCard> {
     // never been fired. Only a missing or unavailable entity is a dead button.
     final broken = entity != null && (s == null || s.state == 'unavailable');
     final hot = b.fired || _lit(b.item);
-    final compact = _columns == 3;
+    final cols = _columns;
     // a colour of its own: the lit state uses it instead of the card's accent
     final accent = parseHex(b.item.str('color')) ?? cardAccent;
     final showName = _showName(b.item);
+    // painted from an attribute: that is the state, and it wins over lit
+    final paint = broken ? null : _paint(b.item);
+    final scale = _iconScale(b.item);
 
     final label = b.armed
         ? (b.item.str('confirm_text') ?? c.str('confirm_text') ?? 'Tap again')
         : (b.item.str('name') ??
               (entity != null ? friendlyName(s, entity) : 'Run'));
-    final icon = broken
-        ? MdiIcons.alertCircleOutline
+    final iconName = broken
+        ? 'mdi:alert-circle-outline'
         : b.fired
-        ? MdiIcons.check
-        : mdi(
-            b.item.str('icon') ??
-                s?.attr<String>('icon') ??
-                _domainIcons[entity?.split('.').first],
-            MdiIcons.gestureTapButton,
-          );
+        ? 'mdi:check'
+        : (b.item.str('icon') ??
+              s?.attr<String>('icon') ??
+              _domainIcons[entity?.split('.').first]);
+    final iconColor = paint?.fg ?? (hot ? accent : Ns.muted);
+    final withName = showName || b.armed;
 
-    return GestureDetector(
+    // The long-press is timed here, at long_press_ms, so it can be set and so
+    // it is the same with a finger or a mouse; it never also fires the button.
+    final lp = _longPressFor(b.item) == 'none' || broken ? null : c.intOr('long_press_ms', 500);
+
+    return RawGestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: broken ? null : () => _press(b),
+      gestures: {
+        TapGestureRecognizer: GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+          TapGestureRecognizer.new,
+          (t) => t.onTap = broken ? null : () => _press(b),
+        ),
+        if (lp != null)
+          LongPressGestureRecognizer: GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+            () => LongPressGestureRecognizer(duration: Duration(milliseconds: lp)),
+            (r) => r.onLongPress = () => _longPress(b.item),
+          ),
+      },
       child: Opacity(
         opacity: broken ? .45 : 1,
         child: Container(
           decoration: BoxDecoration(
-            color: hot ? accent.withValues(alpha: .16) : Ns.surface2,
+            color: paint?.bg ?? (hot ? accent.withValues(alpha: .16) : Ns.surface2),
             borderRadius: BorderRadius.circular(18),
           ),
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: showName ? (compact ? 32 : 40) : (compact ? 40 : 48),
-                color: hot ? accent : Ns.muted,
-              ),
-              // icon only, unless it is waiting for the second tap: that has
-              // to be said, so the name's line comes back with "Tap again"
-              if (showName || b.armed) const SizedBox(height: 8),
-              if (showName || b.armed)
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: hot || b.armed ? accent : Ns.text,
-                    fontSize: compact ? 15 : 18,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -.2,
-                  ),
-                ),
-            ],
+          padding: EdgeInsets.all(cols == 4 ? 6 : 8),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // icon only: 60% of the button's shorter side, so a tall button
+              // gets a big icon; with a name, the fixed size for the column count
+              final size = withName
+                  ? (cols >= 4 ? 28.0 : cols == 3 ? 32.0 : 40.0) * scale
+                  : box.biggest.shortestSide * .6 * scale;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  iconWidget(iconName, fallback: MdiIcons.gestureTapButton, size: size, color: iconColor),
+                  // icon only, unless it is waiting for the second tap: that has
+                  // to be said, so the name's line comes back with "Tap again"
+                  if (withName) SizedBox(height: cols == 4 ? 6 : 8),
+                  if (withName)
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: paint?.fg ?? (hot || b.armed ? accent : Ns.text),
+                        fontSize: cols >= 4 ? 13 : cols == 3 ? 15 : 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -.2,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),

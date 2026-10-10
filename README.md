@@ -424,8 +424,15 @@ websocket client is a port of the one verified against a fake HA in the cards re
 tested the same way here (`flutter test`).
 
 Not here: Home Assistant's more-info dialog. Where the web cards open it, this app opens the
-card's own sheet (climate) or does nothing (read-only cards). And only these thirteen card
-types render; this is a panel, not a browser.
+card's own sheet (climate) or does nothing (read-only cards). A button's long-press
+(`long_press: more-info`, and the default) opens the full-screen control for a light, cover
+or media player - what `long_press: sheet` opens - and nothing for anything else. And only
+these thirteen card types render; this is a panel, not a browser.
+
+`custom:` icons come from a custom-icons integration inside HA, which the app cannot reach.
+It draws the ones in `lib/util/custom_icons.dart` instead, the same paths as
+`icons/custom-icons.js` in the cards repo (a 24x24 viewBox, one path each); a `custom:` name
+that is not there falls back to a generic icon.
 
 ## Layout
 
