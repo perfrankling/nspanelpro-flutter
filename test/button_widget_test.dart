@@ -68,9 +68,16 @@ void main() {
     // icon only on the first, the second asked for its name back
     expect(find.text('Movie mode'), findsNothing);
     expect(find.text('Normal'), findsOneWidget);
-    // lit by the boolean, in violet, while its own script is off
+    // lit by the boolean, in violet, while its own script is off: the button's
+    // background says so; the icons are white either way
+    Color? bg(int i) => (tester
+            .widgetList<Container>(find.descendant(of: find.byType(RawGestureDetector), matching: find.byType(Container)))
+            .map((c) => (c.decoration as BoxDecoration?)?.color)
+            .whereType<Color>()
+            .toList())[i];
     final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
-    expect(icons.first.color, const Color(0xFFA78BFA));
+    expect(bg(0), const Color(0xFFA78BFA).withValues(alpha: .16));
+    expect(icons.first.color, const Color(0xFFF2F4F7));
     // icon only: 60% of the shorter side of the button's content box
     final box = tester.getSize(
       find.ancestor(of: find.byType(Icon).first, matching: find.byType(LayoutBuilder)).first,
@@ -80,16 +87,14 @@ void main() {
       closeTo(box.shortestSide * .6, .01),
       reason: 'the icon is sized to the button',
     );
-    expect(icons.last.color, isNot(const Color(0xFFA78BFA)));
+    expect(icons.last.color, const Color(0xFFF2F4F7));
+    expect(bg(1), isNot(const Color(0xFFA78BFA).withValues(alpha: .16)));
 
     // the boolean goes off: the button goes dark
     fake.states['input_boolean.movie']!['state'] = 'off';
     fake.push('input_boolean.movie');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(
-      tester.widgetList<Icon>(find.byType(Icon)).first.color,
-      isNot(const Color(0xFFA78BFA)),
-    );
+    expect(bg(0), isNot(const Color(0xFFA78BFA).withValues(alpha: .16)));
     unawaited(conn.dispose());
   });
 }

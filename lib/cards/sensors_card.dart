@@ -9,7 +9,11 @@ import '../util/fmt.dart';
 import '../util/icons.dart';
 import 'env.dart';
 
-/// Two to four readings side by side. The density card.
+/// Two to four readings side by side. The density card. Each reading is its
+/// icon with the number and name beside it, no box around it; numbers are the
+/// control cards' 40px. Three or four with icons do not fit a Pro 86 across,
+/// and show_icons: false is the answer to that - an overlong number ends in
+/// an ellipsis inside its own reading rather than running into the next.
 class SensorsCard extends StatelessWidget {
   const SensorsCard({super.key, required this.config, required this.env});
   final CardConfig config;
@@ -31,7 +35,7 @@ class SensorsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(width: 10),
+              if (i > 0) const SizedBox(width: 16),
               Expanded(child: _cell(items[i], showIcons)),
             ],
           ],
@@ -47,28 +51,27 @@ class SensorsCard extends StatelessWidget {
     final n = s?.numeric;
     final unit = item['unit'] != null ? item.str('unit')! : (s?.unit ?? '');
     final text = broken ? '—' : (n == null ? s.state : fmt(n, item['decimals'] as int?));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showIcons) ...[
-            Icon(mdi(item.str('icon') ?? s?.attr<String>('icon') ?? classIcon(s, id)), size: 22, color: Ns.muted),
-            const SizedBox(height: 6),
-          ],
-          BigValue(text, unit: broken ? '' : unit, size: 30),
-          const SizedBox(height: 6),
-          Text(item.str('name') ?? friendlyName(s, id),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Ns.muted, fontSize: 13)),
+    return Row(
+      children: [
+        if (showIcons) ...[
+          iconWidget(item.str('icon') ?? s?.attr<String>('icon') ?? classIcon(s, id), size: 28, color: Ns.muted),
+          const SizedBox(width: 10),
         ],
-      ),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BigValue(text, unit: broken ? '' : unit, size: 40),
+              const SizedBox(height: 4),
+              Text(item.str('name') ?? friendlyName(s, id),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Ns.muted, fontSize: 13)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

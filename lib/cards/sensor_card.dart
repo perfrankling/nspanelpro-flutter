@@ -52,6 +52,7 @@ class SensorCard extends StatelessWidget {
           fill = ((n - min) / (max - min)).clamp(0.0, 1.0);
         }
 
+        final iconName = config.str('icon') ?? s?.attr<String>('icon') ?? classIcon(s, entity);
         final sec = secondary == null ? null : env.states.get(secondary!);
         final sub = broken
             ? 'Unavailable'
@@ -62,22 +63,28 @@ class SensorCard extends StatelessWidget {
           accent: accent,
           fill: fill,
           broken: broken,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconBox(mdi(config.str('icon') ?? s?.attr<String>('icon') ?? classIcon(s, entity))),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  BigValue(text, unit: broken ? '' : unit),
-                  Text(config.titleOr(friendlyName(s, entity)),
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
-                  if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
-                ],
-              ),
-            ],
+          // the icon, and the number, name and second line beside it, centred
+          // in the height - the way the sideways control cards read
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                IconBox(mdi(iconName), name: iconName),
+                const SizedBox(width: 16),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BigValue(text, unit: broken ? '' : unit),
+                      Text(config.titleOr(friendlyName(s, entity)),
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
+                      if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

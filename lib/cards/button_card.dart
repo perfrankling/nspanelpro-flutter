@@ -232,7 +232,9 @@ class _ButtonCardState extends State<ButtonCard> {
         : (b.item.str('icon') ??
               s?.attr<String>('icon') ??
               _domainIcons[entity?.split('.').first]);
-    final iconColor = paint?.fg ?? (hot ? accent : Ns.muted);
+    // white, lit or not: a lit button shows in its background and its name.
+    // Painted from an attribute it takes the colour's own readable text colour.
+    final iconColor = paint?.fg ?? Ns.text;
     final withName = showName || b.armed;
 
     // The long-press is timed here, at long_press_ms, so it can be set and so
