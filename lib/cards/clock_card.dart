@@ -68,6 +68,11 @@ class _ClockCardState extends State<ClockCard> {
     final mm = _now.minute.toString().padLeft(2, '0');
     final ss = c.boolOr('show_seconds', false) ? ':${_now.second.toString().padLeft(2, '0')}' : '';
 
+    // clock_size: the digits in px, 24-160; the am/pm, the date and the gap
+    // under the time keep their proportions to it, as in the web card.
+    final size = c.numOr('clock_size', 88).clamp(24, 160).toDouble();
+    final k = size / 88;
+
     Widget body(HaState? s) {
       final line = s == null
           ? ''
@@ -79,26 +84,29 @@ class _ClockCardState extends State<ClockCard> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // one line, as in the browser: digits too wide for the card are
+            // clipped at its edge rather than broken over two lines
             Text.rich(
+              softWrap: false,
               TextSpan(children: [
                 TextSpan(text: '$hh:$mm$ss'),
                 if (suffix.isNotEmpty)
                   TextSpan(
                       text: ' $suffix',
-                      style: TextStyle(fontSize: 34, fontWeight: FontWeight.w600, color: Ns.text.withValues(alpha: .55))),
+                      style: TextStyle(fontSize: 34 * k, fontWeight: FontWeight.w600, color: Ns.text.withValues(alpha: .55))),
               ]),
-              style: const TextStyle(
+              style: TextStyle(
                   color: Ns.text,
-                  fontSize: 88,
+                  fontSize: size,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: -3.5,
+                  letterSpacing: -.04 * size,
                   height: 1,
                   fontFeatures: Ns.tabular),
             ),
             if (c.boolOr('show_date', true)) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: 10 * k),
               Text('${_days[_now.weekday - 1]} ${_now.day} ${_months[_now.month - 1]}',
-                  style: const TextStyle(color: Ns.muted, fontSize: 20, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: Ns.muted, fontSize: 20 * k, fontWeight: FontWeight.w600)),
             ],
             if (line.isNotEmpty) ...[
               const SizedBox(height: 8),

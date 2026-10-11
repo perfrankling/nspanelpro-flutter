@@ -258,7 +258,11 @@ class _FillCardState extends State<FillCard> {
             child: OverflowBox(
               minHeight: 0,
               maxHeight: double.infinity,
+              // The value plate takes what it needs and the name's plate every
+              // other pixel, as the web card's flex: 0 1 auto does; a Spacer
+              // here would split the free width and halve the name.
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
                     child: Container(
@@ -283,10 +287,9 @@ class _FillCardState extends State<FillCard> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Spacer(),
                   if (widget.value != null)
                     Container(
+                      margin: const EdgeInsets.only(left: 12),
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
                       decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(16)),
                       child: widget.value,

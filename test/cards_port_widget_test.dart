@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:nspanel_app/cards/button_card.dart';
+import 'package:nspanel_app/cards/clock_card.dart';
 import 'package:nspanel_app/cards/cover_card.dart';
 import 'package:nspanel_app/cards/env.dart';
 import 'package:nspanel_app/cards/light_card.dart';
@@ -11,6 +12,7 @@ import 'package:nspanel_app/cards/media_card.dart';
 import 'package:nspanel_app/config/settings.dart';
 import 'package:nspanel_app/ha/connection.dart';
 import 'package:nspanel_app/ha/states.dart';
+import 'package:nspanel_app/ui/fill_card.dart';
 import 'package:nspanel_app/util/color.dart';
 import 'package:nspanel_app/util/custom_icons.dart';
 
@@ -292,5 +294,49 @@ void main() {
     expect(b.top, closeTo(2.362, .001));
     expect(b.right, closeTo(21.562, .001));
     expect(b.bottom, closeTo(21.787, .001));
+  });
+  testWidgets('media, sideways: the name plate gets all the width the value plate leaves', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(480, 480));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const title = 'A rather long song title that a browser card shows most of';
+    final (_, env, conn) = await _house({
+      'media_player.k': st('media_player.k', 'playing',
+          {'friendly_name': 'Kitchen', 'media_title': title, 'media_artist': 'Someone', 'volume_level': .3}),
+    });
+    await tester.pumpWidget(_app(SizedBox(
+      width: 456,
+      child: MediaCard(
+        config: {'entity': 'media_player.k', 'height': 120, 'fill_direction': 'horizontal'},
+        env: env,
+      ),
+    )));
+    await tester.pump();
+    final name = tester.getRect(find.text(title));
+    final value = tester.getRect(find.byType(ValueText));
+    // the long name runs up to the value plate: its own padding (16) and the
+    // gap (12) between them, where a Spacer used to take half the free width
+    expect(value.left - name.right, inInclusiveRange(0, 40));
+    unawaited(conn.dispose());
+  });
+
+  testWidgets('clock: clock_size sets the digits, clamped to 24-160', (tester) async {
+    final (_, env, conn) = await _house({});
+    // tall enough for 160px digits and the date under them
+    double digits(Map<String, dynamic> cfg) {
+      final t = tester.widget<Text>(find.byWidgetPredicate((w) => w is Text && w.textSpan != null).first);
+      return t.style!.fontSize!;
+    }
+
+    for (final (cfg, want) in [
+      (<String, dynamic>{}, 88.0),
+      ({'clock_size': 120}, 120.0),
+      ({'clock_size': 500}, 160.0),
+      ({'clock_size': 4}, 24.0),
+    ]) {
+      await tester.pumpWidget(_app(ClockCard(key: UniqueKey(), config: {'height': 280, ...cfg}, env: env)));
+      expect(digits(cfg), want);
+    }
+    await tester.pumpWidget(const SizedBox());
+    unawaited(conn.dispose());
   });
 }
