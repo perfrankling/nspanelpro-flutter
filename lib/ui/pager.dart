@@ -5,6 +5,12 @@ import 'theme.dart';
 /// Pages side by side, swiped. PageView's horizontal recognizer and the
 /// cards' vertical one settle it in the gesture arena, which is the same
 /// axis-lock the web cards do by hand.
+///
+/// A page taller than the screen scrolls, as it does in a browser. A vertical
+/// drag that starts on a card which takes vertical drags (a vertical light,
+/// cover or media card) is still that card's; anywhere else - a sideways card,
+/// a button, the gap between cards - it scrolls the page. No scrollbar, and no
+/// overscroll effect: the stretch is an animation the GPU would pay for.
 class PanelPager extends StatefulWidget {
   const PanelPager({
     super.key,
@@ -85,7 +91,13 @@ class _PanelPagerState extends State<PanelPager> {
               Ns.gap,
               many ? 26 : Ns.gap,
             ),
-            child: widget.pages[i],
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, overscroll: false),
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: widget.pages[i],
+              ),
+            ),
           ),
         ),
         if (many)

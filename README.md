@@ -57,6 +57,11 @@ views:
 Every card and option is documented in the cards repo's README; this app takes the same ones.
 Heights are in logical pixels, which on the panel at stock density are the panel's pixels.
 
+A page taller than the screen scrolls up and down, as it does in a browser. Start the scroll on
+anything that does not take vertical drags itself - a sideways card (`fill_direction:
+horizontal`), a button or switch, an information card, the gap between cards; on a vertical
+light, cover or media card the drag sets the card instead. No scrollbar, no overscroll effect.
+
 The switch card is the button card's sibling for switches, input booleans and fans: each tile
 is lit while its entity is on, and a tap turns it the other way, echoed at once for
 `echo_ms` so the tile never shows the old state under a finger.
