@@ -1,6 +1,9 @@
 name: Release
 
 # Push a tag like v0.3.0 and this attaches the arm64 APK to a GitHub Release.
+# Or run it by hand (Actions -> Release -> Run workflow) on main: it then makes
+# the tag itself, v + the version in pubspec.yaml unless one is typed in, on
+# the commit it built - for when a tag cannot be pushed from where you are.
 # The panels find it there: the app checks releases/latest and installs it
 # through the panel's own adb daemon when HA says so. The APK is signed with
 # the project's keystore from the repository secrets, so it installs over
@@ -9,6 +12,10 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, e.g. v0.7.0 (empty: v + the version in pubspec.yaml)"
+        required: false
 
 permissions:
   contents: write
@@ -40,11 +47,30 @@ jobs:
             echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
           } >> "$GITHUB_ENV"
 
+      # A pushed tag names itself; a manual run takes the input, else pubspec's
+      # version without its build number (0.7.0+17 -> v0.7.0).
+      - name: Tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+          elif [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="v$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml)"
+          fi
+          echo "Releasing $tag from ${{ github.sha }}"
+          echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
+
       - run: flutter pub get
       - run: flutter test
       - run: flutter build apk --release --split-per-abi
 
       - uses: softprops/action-gh-release@v2
         with:
+          # makes the tag on this commit when it does not exist yet
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           files: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           generate_release_notes: true
