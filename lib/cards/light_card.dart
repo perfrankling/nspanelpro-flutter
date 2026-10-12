@@ -176,7 +176,9 @@ class _LightCardState extends State<LightCard> with EchoMixin {
             name: iconName,
             on: on,
           ),
-          value: on ? ValueText('$pct', unit: '%') : null,
+          // show_value: false leaves the big number and its plate out; the
+          // state line under the name keeps the level
+          value: on && c.boolOr('show_value', true) ? ValueText('$pct', unit: '%') : null,
           title: c.titleOr(friendlyName(s, entity)),
           sub: broken ? 'Unavailable' : (on ? 'On · $pct%' : 'Off'),
           chips: showPresets

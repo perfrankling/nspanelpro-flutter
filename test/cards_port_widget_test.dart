@@ -339,4 +339,20 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());
   });
+  testWidgets('light: show_value false drops the number, the state line keeps it', (tester) async {
+    final (_, env, conn) = await _house({
+      'light.desk': st('light.desk', 'on', {'friendly_name': 'Desk', 'brightness': 128}),
+    });
+    for (final shown in [true, false]) {
+      await tester.pumpWidget(_app(LightCard(
+        key: UniqueKey(),
+        config: {'entity': 'light.desk', 'height': 120, 'fill_direction': 'horizontal', 'show_value': shown},
+        env: env,
+      )));
+      await tester.pump();
+      expect(find.byType(ValueText), shown ? findsOneWidget : findsNothing);
+      expect(find.text('On · 50%'), findsOneWidget);
+    }
+    unawaited(conn.dispose());
+  });
 }
