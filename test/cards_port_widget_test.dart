@@ -220,7 +220,7 @@ void main() {
     expect(fake.calls.single, startsWith('cover.set_cover_tilt_position'));
     expect(_last(fake, 'cover.set_cover_tilt_position', 'tilt_position'), inInclusiveRange(74, 76));
 
-    // Open and Close leave the sheet up, like Stop: it is where you watch it go
+    // no button closes the sheet: Open and Close leave it up, like Stop
     fake.calls.clear();
     await tester.tap(find.byIcon(MdiIcons.arrowUp));
     await tester.pump(const Duration(milliseconds: 300));
@@ -362,6 +362,40 @@ void main() {
       expect(find.byType(ValueText), shown ? findsOneWidget : findsNothing);
       expect(find.text('On · 50%'), findsOneWidget);
     }
+    unawaited(conn.dispose());
+  });
+  testWidgets('sheet: no action closes it - light toggle, presets, media Off', (tester) async {
+    final (fake, env, conn) = await _house({
+      'light.desk': st('light.desk', 'on', {'friendly_name': 'Desk', 'brightness': 128}),
+      'media_player.k': st('media_player.k', 'playing',
+          {'friendly_name': 'Kitchen', 'volume_level': .3, 'supported_features': 256 | 16384 | 1 | 4}),
+    });
+    await tester.pumpWidget(_app(Column(children: [
+      LightCard(config: {'entity': 'light.desk', 'height': 200, 'show_presets': false}, env: env),
+      MediaCard(config: {'entity': 'media_player.k', 'height': 200, 'show_transport': false}, env: env),
+    ])));
+    await tester.pump();
+
+    await tester.longPress(find.byType(LightCard));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Turn off'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Low'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(fake.calls.where((c) => c.startsWith('light.')).length, 2);
+    expect(find.text('Turn off'), findsOneWidget, reason: 'still open');
+    await tester.tap(find.byIcon(Icons.close));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Turn off'), findsNothing, reason: 'the X closes it');
+
+    await tester.longPress(find.byType(MediaCard));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Off'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(fake.calls.last, 'media_player.turn_off {"entity_id":"media_player.k"}');
+    expect(find.text('Off'), findsOneWidget, reason: 'still open');
     unawaited(conn.dispose());
   });
 }

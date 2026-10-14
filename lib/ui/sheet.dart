@@ -5,11 +5,10 @@ import '../util/color.dart';
 import 'theme.dart';
 
 class SheetAction {
-  const SheetAction({required this.label, this.icon, this.primary = false, this.close = true, required this.run});
+  const SheetAction({required this.label, this.icon, this.primary = false, required this.run});
   final String label;
   final IconData? icon;
   final bool primary;
-  final bool close;
   final VoidCallback run;
 }
 
@@ -261,10 +260,13 @@ class _SheetState extends State<_Sheet> {
                         Expanded(
                           child: _Square(
                             color: s.actions[i].primary ? s.accent : Ns.surface,
+                            // No action closes the sheet: it updates in place,
+                            // so the result shows here, and a wrong tap is one
+                            // more tap to undo - not a long-press to come back.
+                            // The X and the barrier close it.
                             onTap: () {
                               HapticFeedback.lightImpact();
                               s.actions[i].run();
-                              if (s.actions[i].close) Navigator.of(context).pop();
                             },
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,

@@ -132,16 +132,16 @@ class MediaLogic {
           : null,
       actions: [
         if (s?.supports(_prev) ?? false)
-          SheetAction(label: 'Previous', icon: MdiIcons.skipPrevious, close: false, run: () => call('media_previous_track')),
+          SheetAction(label: 'Previous', icon: MdiIcons.skipPrevious, run: () => call('media_previous_track')),
         SheetAction(
           label: playing(s) ? 'Pause' : 'Play',
           icon: playing(s) ? MdiIcons.pause : MdiIcons.play,
           primary: true,
-          close: false,
+         
           run: () => call('media_play_pause'),
         ),
         if (s?.supports(_next) ?? false)
-          SheetAction(label: 'Next', icon: MdiIcons.skipNext, close: false, run: () => call('media_next_track')),
+          SheetAction(label: 'Next', icon: MdiIcons.skipNext, run: () => call('media_next_track')),
         if (s?.supports(_stop) ?? false)
           SheetAction(label: 'Stop', icon: MdiIcons.stop, run: () => call('media_stop'))
         else if (s?.supports(_turnOff) ?? false)
