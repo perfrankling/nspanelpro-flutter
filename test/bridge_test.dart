@@ -135,6 +135,7 @@ void main() {
     broker.deliver('nspanel/abc123/sleep/set', 'ON');
     broker.deliver('nspanel/abc123/auto_brightness/set', 'OFF');
     broker.deliver('nspanel/abc123/brightness_daylight/set', '800.0');
+    broker.deliver('nspanel/abc123/update_interval/set', '60');
     broker.deliver('nspanel/abc123/settings_reset/set', 'PRESS');
     await pumpEventQueue();
     expect(commands, [
@@ -142,6 +143,7 @@ void main() {
       'setting sleep ON',
       'setting auto_brightness OFF',
       'setting brightness_daylight 800.0',
+      'setting update_interval 60',
       'setting settings_reset PRESS',
     ]);
     bridge.setting('idle_timeout', '600');

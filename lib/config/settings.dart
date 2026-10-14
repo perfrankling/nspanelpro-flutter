@@ -20,6 +20,7 @@ class Settings {
     this.feedback,
     this.overrides,
     this.brightness,
+    this.updateCheckMinutes,
   });
 
   String url;
@@ -49,6 +50,19 @@ class Settings {
   /// Auto brightness: {auto, min, max, daylight_lux}. Also under `brightness`
   /// in setup.json.
   Map<String, dynamic>? brightness;
+
+  /// Minutes between checks for a new release on GitHub, set from HA's
+  /// device page or `update_check_minutes` in setup.json. Null is the default
+  /// of six hours; 0 turns the periodic check off (the one half a minute after
+  /// start, and the setup screen's button, still check). Anything above 0 is
+  /// at least 5, which keeps a house full of panels well under GitHub's 60
+  /// unauthenticated requests an hour.
+  int? updateCheckMinutes;
+
+  int get updateMinutes {
+    final m = (updateCheckMinutes ?? 360).clamp(0, 10080);
+    return m == 0 ? 0 : (m < 5 ? 5 : m);
+  }
 
   bool get autoBrightness =>
       brightness?['auto'] is bool ? brightness!['auto'] as bool : false;
@@ -97,6 +111,7 @@ class Settings {
   static const _kFeedback = 'feedback';
   static const _kOverrides = 'overrides';
   static const _kBrightness = 'brightness';
+  static const _kUpdateMinutes = 'update_check_minutes';
 
   static Map<String, dynamic>? _map(SharedPreferences p, String key) {
     final raw = p.getString(key);
@@ -164,6 +179,9 @@ class Settings {
                   ? (j['brightness'] as Map).cast<String, dynamic>()
                   : null)
             : current?.brightness,
+        updateCheckMinutes: j.containsKey('update_check_minutes')
+            ? (j['update_check_minutes'] as num?)?.toInt()
+            : current?.updateCheckMinutes,
       );
       await s.save();
       return true;
@@ -192,6 +210,7 @@ class Settings {
       feedback: _map(p, _kFeedback),
       overrides: _map(p, _kOverrides),
       brightness: _map(p, _kBrightness),
+      updateCheckMinutes: p.getInt(_kUpdateMinutes),
     );
   }
 
@@ -202,6 +221,11 @@ class Settings {
     await p.setString(_kDash, dashboard);
     await p.setString(_kName, name);
     await p.setString(_kTts, ttsEngine);
+    if (updateCheckMinutes == null) {
+      await p.remove(_kUpdateMinutes);
+    } else {
+      await p.setInt(_kUpdateMinutes, updateCheckMinutes!);
+    }
     final maps = {
       _kSaver: screensaver,
       _kMqtt: mqtt,

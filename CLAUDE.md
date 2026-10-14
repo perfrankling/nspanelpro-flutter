@@ -98,7 +98,8 @@ test/          everything above against fakes
 
 Bump `version` in `pubspec.yaml` and `appVersion` in `lib/app.dart` together. Tag `vX.Y.Z`
 and push the tag; the Release workflow signs with the secrets and attaches the arm64 APK.
-The panels see it within six hours, or at once after a restart.
+The panels see it within six hours (or their Update check interval, set from HA), or at once
+after a restart.
 
 Where a tag cannot be pushed (a Claude Code cloud session's git proxy refuses tags), run the
 Release workflow by hand on `main` instead: it makes the tag itself, `v` + the version in

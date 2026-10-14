@@ -100,6 +100,7 @@ class _SetupScreenState extends State<SetupScreen> {
       feedback: widget.initial?.feedback,
       overrides: widget.initial?.overrides,
       brightness: widget.initial?.brightness,
+      updateCheckMinutes: widget.initial?.updateCheckMinutes,
     );
     s.save().then((_) => widget.onSaved(s));
   }

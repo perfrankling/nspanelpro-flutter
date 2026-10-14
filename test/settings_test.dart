@@ -27,4 +27,13 @@ void main() {
     expect(s.resolve('/api/media_player_proxy/x?token=1'), 'http://10.0.0.2:8123/api/media_player_proxy/x?token=1');
     expect(s.resolve('https://cdn.example.com/a.jpg'), 'https://cdn.example.com/a.jpg');
   });
+  test('the update check interval: six hours by default, 0 is off, at least 5, at most a week', () {
+    int m(int? v) => Settings(url: 'http://x', token: 't', updateCheckMinutes: v).updateMinutes;
+    expect(m(null), 360);
+    expect(m(0), 0);
+    expect(m(1), 5);
+    expect(m(60), 60);
+    expect(m(-3), 0);
+    expect(m(999999), 10080);
+  });
 }

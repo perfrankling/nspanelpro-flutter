@@ -73,6 +73,7 @@ class PanelBridge {
     'brightness_min',
     'brightness_max',
     'brightness_daylight',
+    'update_interval',
   ];
 
   String get base => 'nspanel/$deviceId';
@@ -275,6 +276,17 @@ class PanelBridge {
         'mode': 'box',
         'unit_of_measurement': 'lx',
         'icon': 'mdi:white-balance-sunny',
+        ...conf,
+      }, command: true),
+      // how often the panel asks GitHub for a new release; 0 = only at start
+      'number/$deviceId/update_interval': e('update_interval', {
+        'name': 'Update check interval',
+        'min': 0,
+        'max': 10080,
+        'step': 5,
+        'mode': 'box',
+        'unit_of_measurement': 'min',
+        'icon': 'mdi:update',
         ...conf,
       }, command: true),
       'button/$deviceId/settings_reset': {

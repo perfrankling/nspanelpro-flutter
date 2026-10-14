@@ -316,10 +316,7 @@ class _DashboardState extends State<Dashboard> {
     _updateCheck?.cancel();
     _updateCheck = Timer(const Duration(seconds: 30), () {
       widget.updater.check();
-      _updateCheck = Timer.periodic(
-        const Duration(hours: 6),
-        (_) => widget.updater.check(),
-      );
+      _scheduleUpdateChecks();
     });
     _mqtt!.connected.addListener(() {
       debugPrint(
@@ -373,6 +370,16 @@ class _DashboardState extends State<Dashboard> {
     ),
   );
 
+  /// The periodic release check, every `update_interval` minutes (six hours
+  /// unless HA says otherwise; 0 = none). A new interval counts from now.
+  void _scheduleUpdateChecks() {
+    _updateCheck?.cancel();
+    _updateCheck = null;
+    final m = widget.settings.updateMinutes;
+    if (m == 0) return;
+    _updateCheck = Timer.periodic(Duration(minutes: m), (_) => widget.updater.check());
+  }
+
   void _publishUpdate() {
     final u = widget.updater;
     final l = u.latest.value;
@@ -408,6 +415,7 @@ class _DashboardState extends State<Dashboard> {
     b.setting('brightness_min', st.brightnessMin.toString());
     b.setting('brightness_max', st.brightnessMax.toString());
     b.setting('brightness_daylight', st.brightnessDaylight.round().toString());
+    b.setting('update_interval', st.updateMinutes.toString());
   }
 
   Future<void> _onSetting(String object, String value) async {
@@ -437,6 +445,13 @@ class _DashboardState extends State<Dashboard> {
       case 'brightness_daylight' when n != null:
         st.brightness = {...?st.brightness, 'daylight_lux': n.toDouble()};
         _follower.reset();
+      case 'update_interval' when n != null:
+        st.updateCheckMinutes = n.round();
+        await st.save();
+        debugPrint('settings: update_interval = ${st.updateMinutes} min');
+        _publishSettings();
+        _scheduleUpdateChecks();
+        return;
       default:
         return;
     }

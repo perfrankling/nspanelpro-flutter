@@ -214,7 +214,8 @@ The app reads it once, saves the settings, and deletes the file. Delete `setup.j
 computer too; it has your token in it. A later file is a **partial** update — only the keys in
 it change — which is how you re-point a panel at a different dashboard, or adjust its
 screensaver, from your desk without re-entering the token. The full set of keys is `url`,
-`token`, `dashboard`, `name`, `mqtt`, `tts_engine`, `screensaver` and `feedback`.
+`token`, `dashboard`, `name`, `mqtt`, `tts_engine`, `screensaver`, `feedback`, `brightness`
+and `update_check_minutes`.
 
 ### Touch feedback
 
@@ -255,7 +256,9 @@ authentication off (`ro.adb.secure=0`), so the app talks the adb protocol to
 desk. The install kills the running app; a broadcast receiver starts the new one, so from HA
 it looks like a ten-second reboot. The setup screen (two-finger hold) shows the installed
 version and has the same Update button, and the panel checks GitHub half a minute after
-start and every six hours.
+start and then every six hours - or every **Update check interval** minutes, set on the
+panel's device page in HA (0 checks only at start; anything else is at least 5, and a new
+value counts from when it is set). `update_check_minutes` in `setup.json` sets the same.
 
 Releases come from a tag: `git tag v0.3.0 && git push --tags` and the `Release` workflow
 builds the APK and attaches it. **The signing key matters:** Android only installs an update
@@ -288,6 +291,7 @@ Give the app your MQTT broker and it registers itself through MQTT discovery: on
 | `update` App | the installed and latest version, release notes, and Install (see Updating) |
 | `number` Idle timeout, `switch` Sleep, `number` Sleep after, `number` Wake sensitivity | the screensaver's `after`, `sleep`, `sleep_after` and `proximity_delta`, changeable from HA (see Panel settings) |
 | `switch` Auto brightness, `number` minimum / maximum / daylight | the screen follows the light sensor (see Panel settings) |
+| `number` Update check interval | minutes between checks for a new release, default 360; 0 = only at start (see Updating) |
 | `button` Use dashboard settings | drops every override; the dashboard card is the config again |
 | `button` Stop audio | |
 | Wi-Fi signal, SoC temperature, slow frames, app version, last touch | diagnostics |
