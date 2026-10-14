@@ -107,10 +107,12 @@ class CoverLogic {
       stepDown: tiltButtons
           ? SheetAction(label: 'Tilt close', icon: MdiIcons.rotateRight, run: () => call('close_cover_tilt'))
           : null,
+      // none of the three closes the sheet: the cover takes a while, and the
+      // sheet is where you watch it go and stop it
       actions: [
-        SheetAction(label: 'Open', icon: MdiIcons.arrowUp, run: () => call('open_cover')),
+        SheetAction(label: 'Open', icon: MdiIcons.arrowUp, close: false, run: () => call('open_cover')),
         SheetAction(label: 'Stop', icon: MdiIcons.stop, primary: true, close: false, run: () => call('stop_cover')),
-        SheetAction(label: 'Close', icon: MdiIcons.arrowDown, run: () => call('close_cover')),
+        SheetAction(label: 'Close', icon: MdiIcons.arrowDown, close: false, run: () => call('close_cover')),
       ],
       onInput: hold,
       onCommit: (nv) {

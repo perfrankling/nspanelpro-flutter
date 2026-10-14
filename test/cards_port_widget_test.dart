@@ -219,6 +219,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(fake.calls.single, startsWith('cover.set_cover_tilt_position'));
     expect(_last(fake, 'cover.set_cover_tilt_position', 'tilt_position'), inInclusiveRange(74, 76));
+
+    // Open and Close leave the sheet up, like Stop: it is where you watch it go
+    fake.calls.clear();
+    await tester.tap(find.byIcon(MdiIcons.arrowUp));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byIcon(MdiIcons.arrowDown));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(fake.calls, ['cover.open_cover {"entity_id":"cover.blind"}', 'cover.close_cover {"entity_id":"cover.blind"}']);
+    expect(find.text('Position'), findsOneWidget, reason: 'the sheet is still open');
     unawaited(conn.dispose());
   });
 
