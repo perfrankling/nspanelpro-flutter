@@ -1,6 +1,9 @@
 package nl.mennovanhout.nspanel_app
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -52,6 +55,30 @@ class MainActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         // A wall panel that goes to sleep is a wall. No plugin needed for one flag.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        applyHomeExtra(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        applyHomeExtra(intent)
+    }
+
+    // adb shell am start -n <this activity> --ez home true|false : switch the
+    // `.Home` alias on or off. Android 8 will not let the shell do it
+    // (`pm enable` on a component of a non-test app is a SecurityException),
+    // but an app may always change its own components. Making it the default
+    // home is still the shell's `cmd package set-home-activity`.
+    private fun applyHomeExtra(intent: Intent?) {
+        if (intent?.hasExtra("home") != true) return
+        val on = intent.getBooleanExtra("home", false)
+        intent.removeExtra("home")
+        packageManager.setComponentEnabledSetting(
+            // the alias lives in the code namespace, not the applicationId
+            ComponentName(this, "nl.mennovanhout.nspanel_app.Home"),
+            if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP)
+        android.util.Log.i("nspanel", "home alias ${if (on) "enabled" else "disabled"}")
     }
 
     /// A sensor as an event stream, registered only while Dart listens.

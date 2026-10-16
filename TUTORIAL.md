@@ -309,9 +309,13 @@ and after it updates itself, and it keeps the screen on while it runs. If you wa
 the panel's home screen too, so nothing else can ever be in front of it:
 
 ```bash
-adb -s 10.0.0.50:5555 shell pm enable nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.Home
+adb -s 10.0.0.50:5555 shell am start -n nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.MainActivity --ez home true
 adb -s 10.0.0.50:5555 shell cmd package set-home-activity nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.Home
 ```
+
+The first line has the app switch on its own home-screen entry (app 0.8.3 or later). Do not
+use `pm enable` for it: Android 8 refuses that from adb with "Shell cannot change component
+state".
 
 ### 9. Updating
 

@@ -233,15 +233,18 @@ are on by default; turn either off or set the click's volume in `setup.json`:
 The app comes back up by itself after a power cut, and after it has updated itself. Nothing
 to enable. If you also want it to be the panel's home screen, so nothing else ever shows
 and a stray Home press lands on the dashboard, there is a disabled `Home` alias you can
-switch on from your desk:
+switch on from your desk (app 0.8.3 or later):
 
 ```bash
-adb shell pm enable nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.Home
+adb shell am start -n nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.MainActivity --ez home true
 adb shell cmd package set-home-activity nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.Home
 ```
 
-The stock launcher stays installed; `set-home-activity l.l/...` (its package is `l.l`) puts
-it back.
+The first line asks the app to enable the alias itself: Android 8 refuses `pm enable` on a
+single component of an installed app ("Shell cannot change component state"), but an app may
+always switch its own components. The stock launcher stays installed: point
+`set-home-activity` back at it (its package is `l.l`), then `--ez home false` switches the
+alias off again.
 
 ### Updating
 
