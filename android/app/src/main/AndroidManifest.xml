@@ -41,9 +41,9 @@
         <!-- Optional: make the app the panel's home screen, so nothing else ever shows.
              Disabled until you enable it (see README "Start on boot"). The shell may not
              enable a component of this app (`pm enable` is a SecurityException on Android 8),
-             so the app does it itself, from a launch extra:
-               adb shell am start -n nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.MainActivity --ez home true
-               adb shell cmd package set-home-activity nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.Home -->
+             so the app does it itself when started with the boolean extra "home" set to true,
+             then `cmd package set-home-activity` makes it the default. The exact commands are
+             in the README. (No double hyphen in here: XML comments may not contain one.) -->
         <activity-alias
             android:name=".Home"
             android:targetActivity=".MainActivity"
