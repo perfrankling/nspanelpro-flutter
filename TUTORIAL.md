@@ -317,6 +317,25 @@ The first line has the app switch on its own home-screen entry (app 0.8.3 or lat
 use `pm enable` for it: Android 8 refuses that from adb with "Shell cannot change component
 state".
 
+**Back to the panel's own launcher.** The stock home app stays installed (its package is
+`l.l`), so this is reversible at any time. First ask Android which home screens it has:
+
+```bash
+adb -s 10.0.0.50:5555 shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+```
+
+Among the lines it prints is one that starts with `l.l/` - the stock launcher's activity, for
+example `l.l/.SomeActivity` (the exact name is the panel firmware's). Make that the home
+screen again, then have the app switch its own home entry off:
+
+```bash
+adb -s 10.0.0.50:5555 shell cmd package set-home-activity l.l/<the activity from the line above>
+adb -s 10.0.0.50:5555 shell am start -n nl.mennovanhout.nspanel/nl.mennovanhout.nspanel_app.MainActivity --ez home false
+```
+
+Press Home (or reboot) and the panel's own screen is back. The app itself is untouched: it
+still starts on boot and still updates itself, it just is not the home screen any more.
+
 ### 9. Updating
 
 The panel's device in Home Assistant has an **update** entity. When a new release is on

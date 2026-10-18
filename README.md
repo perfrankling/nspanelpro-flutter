@@ -243,8 +243,9 @@ adb shell cmd package set-home-activity nl.mennovanhout.nspanel/nl.mennovanhout.
 The first line asks the app to enable the alias itself: Android 8 refuses `pm enable` on a
 single component of an installed app ("Shell cannot change component state"), but an app may
 always switch its own components. The stock launcher stays installed: point
-`set-home-activity` back at it (its package is `l.l`), then `--ez home false` switches the
-alias off again.
+`set-home-activity` back at it (its package is `l.l`; `cmd package query-activities --brief -a
+android.intent.action.MAIN -c android.intent.category.HOME` names its activity), then
+`--ez home false` switches the alias off again. TUTORIAL.md section 8 has the steps.
 
 ### Updating
 
