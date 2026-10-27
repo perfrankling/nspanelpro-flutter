@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/dashboard.dart';
 import '../ha/states.dart';
 import '../ui/fill_card.dart';
+import '../ui/graph.dart';
 import '../ui/info_shell.dart';
 import '../ui/theme.dart';
 import '../util/color.dart';
@@ -58,32 +59,47 @@ class SensorCard extends StatelessWidget {
             ? 'Unavailable'
             : (sec != null ? '${friendlyName(sec, secondary!)} ${fmt(sec.numeric)}${sec.unit}' : '');
 
-        return InfoShell(
-          height: config.numOr('height', 200),
-          accent: accent,
-          fill: fill,
-          broken: broken,
-          // the icon, and the number, name and second line beside it, centred
-          // in the height - the way the sideways control cards read
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                IconBox(mdi(iconName), name: iconName),
-                const SizedBox(width: 16),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      BigValue(text, unit: broken ? '' : unit),
-                      Text(config.titleOr(friendlyName(s, entity)),
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
-                      if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
-                    ],
+        // long-press: this sensor's last hours, full-screen
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: config.str('long_press') == 'none'
+              ? null
+              : () => showGraphView(context, env: env, items: [
+                    GraphItem(
+                      entity: entity,
+                      name: config.titleOr(friendlyName(s, entity)),
+                      color: parseHex(config.str('accent')) ?? Ns.sky,
+                      unit: config.str('unit'),
+                      decimals: config['decimals'] as int?,
+                    ),
+                  ]),
+          child: InfoShell(
+            height: config.numOr('height', 200),
+            accent: accent,
+            fill: fill,
+            broken: broken,
+            // the icon, and the number, name and second line beside it, centred
+            // in the height - the way the sideways control cards read
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  IconBox(mdi(iconName), name: iconName),
+                  const SizedBox(width: 16),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BigValue(text, unit: broken ? '' : unit),
+                        Text(config.titleOr(friendlyName(s, entity)),
+                            maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
+                        if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

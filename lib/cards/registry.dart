@@ -9,6 +9,7 @@ import 'switch_card.dart';
 import 'climate_card.dart';
 import 'clock_card.dart';
 import 'cover_card.dart';
+import 'graph_card.dart';
 import 'env.dart';
 import 'light_card.dart';
 import 'media_card.dart';
@@ -56,6 +57,8 @@ Widget _card(CardConfig c, PanelEnv env) {
       return WeatherCard(config: c, env: env);
     case 'nspanel-clock-card':
       return ClockCard(config: c, env: env);
+    case 'nspanel-graph-card':
+      return GraphCard(config: c, env: env);
     case 'nspanel-screensaver':
       // config for the app, read elsewhere; nothing to draw
       return const SizedBox.shrink();

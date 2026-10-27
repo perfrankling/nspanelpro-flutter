@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config/dashboard.dart';
 import '../ha/states.dart';
+import '../ui/graph.dart';
 import '../ui/info_shell.dart';
 import '../ui/theme.dart';
 import '../util/color.dart';
@@ -45,7 +46,7 @@ class SensorsCard extends StatelessWidget {
           children: [
             for (var i = 0; i < items.length; i++) ...[
               if (i > 0) const SizedBox(width: 16),
-              Expanded(child: _cell(items[i], showIcons)),
+              Expanded(child: _cell(context, items[i], showIcons)),
             ],
           ],
         ),
@@ -53,9 +54,28 @@ class SensorsCard extends StatelessWidget {
     );
   }
 
-  Widget _cell(CardConfig item, bool showIcons) {
+  Widget _cell(BuildContext context, CardConfig item, bool showIcons) {
     if (item['clock'] == true) return _LocalTime(item: item, showIcons: showIcons);
     final id = item.str('entity') ?? '';
+    // long-press a reading: its last hours, full-screen
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: config.str('long_press') == 'none'
+          ? null
+          : () => showGraphView(context, env: env, items: [
+                GraphItem(
+                  entity: id,
+                  name: item.str('name') ?? friendlyName(env.states.get(id), id),
+                  color: parseHex(config.str('accent')) ?? Ns.sky,
+                  unit: item.str('unit'),
+                  decimals: item['decimals'] as int?,
+                ),
+              ]),
+      child: _reading(item, id, showIcons),
+    );
+  }
+
+  Widget _reading(CardConfig item, String id, bool showIcons) {
     final s = env.states.get(id);
     final broken = s == null || s.isBroken;
     final n = s?.numeric;

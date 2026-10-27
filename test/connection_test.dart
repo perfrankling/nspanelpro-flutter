@@ -21,6 +21,14 @@ class FakeHa implements HaTransport {
   final _out = StreamController<String>();
   final calls = <String>[];
   final sent = <Map<String, dynamic>>[];
+
+  /// Long-term statistics by statistic_id, as recorder/statistics_during_period
+  /// returns them ({start, mean, min, max}); an id not here has none, which is
+  /// what sends a graph to the history instead.
+  final statistics = <String, List<Map<String, dynamic>>>{};
+
+  /// Recorded history by entity_id, in the minimal format ({s, lu}).
+  final history = <String, List<Map<String, dynamic>>>{};
   final _subs = <int, String>{};
   bool closed = false;
 
@@ -62,6 +70,26 @@ class FakeHa implements HaTransport {
           'type': 'result',
           'success': true,
           'result': null,
+        });
+      case 'recorder/statistics_during_period':
+        _emit({
+          'id': msg['id'],
+          'type': 'result',
+          'success': true,
+          'result': {
+            for (final id in (msg['statistic_ids'] as List).cast<String>())
+              if (statistics[id] != null) id: statistics[id],
+          },
+        });
+      case 'history/history_during_period':
+        _emit({
+          'id': msg['id'],
+          'type': 'result',
+          'success': true,
+          'result': {
+            for (final id in (msg['entity_ids'] as List).cast<String>())
+              if (history[id] != null) id: history[id],
+          },
         });
       case 'call_service':
         calls.add(
