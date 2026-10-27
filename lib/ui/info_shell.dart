@@ -31,7 +31,7 @@ class InfoShell extends StatelessWidget {
       child: Container(
         height: height,
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(Ns.radius)),
+        decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.card(context)),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -132,7 +132,7 @@ class Tile extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12),
           decoration: BoxDecoration(
             color: alert ? accent.withValues(alpha: .16) : Colors.white.withValues(alpha: .06),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: CardRadius.inner(context, 14),
           ),
           child: Row(
             children: [

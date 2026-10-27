@@ -21,6 +21,14 @@ import 'weather_card.dart';
 /// vanishing, so a dashboard that mixes in an unsupported card still shows
 /// where it was.
 Widget buildCard(CardConfig c, PanelEnv env) {
+  // `radius`, which every card takes: the card and the shapes inside it read
+  // it from here (CardRadius), so no card has to pass it along itself
+  final card = _card(c, env);
+  final r = CardRadius.fromConfig(c['radius']);
+  return r == null ? card : CardRadius(radius: r, child: card);
+}
+
+Widget _card(CardConfig c, PanelEnv env) {
   switch (cardType(c)) {
     case 'nspanel-light-card':
       return LightCard(config: c, env: env);
@@ -74,7 +82,7 @@ class UnsupportedCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
           color: Ns.surface,
-          borderRadius: BorderRadius.circular(Ns.radius),
+          borderRadius: CardRadius.card(context),
           border: Border.all(color: Ns.danger.withValues(alpha: .5)),
         ),
         child: Text('Not rendered here: $type',

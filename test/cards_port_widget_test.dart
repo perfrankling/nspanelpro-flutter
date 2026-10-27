@@ -9,6 +9,7 @@ import 'package:nspanel_app/cards/cover_card.dart';
 import 'package:nspanel_app/cards/env.dart';
 import 'package:nspanel_app/cards/light_card.dart';
 import 'package:nspanel_app/cards/media_card.dart';
+import 'package:nspanel_app/cards/registry.dart';
 import 'package:nspanel_app/config/settings.dart';
 import 'package:nspanel_app/ha/connection.dart';
 import 'package:nspanel_app/ha/states.dart';
@@ -396,6 +397,35 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(fake.calls.last, 'media_player.turn_off {"entity_id":"media_player.k"}');
     expect(find.text('Off'), findsOneWidget, reason: 'still open');
+    unawaited(conn.dispose());
+  });
+  testWidgets('radius: the card and the shapes inside it, scaled; 22 without it; clamped', (tester) async {
+    final (_, env, conn) = await _house({
+      'light.desk': st('light.desk', 'on', {'friendly_name': 'Desk', 'brightness': 128}),
+      'script.night': st('script.night', 'off', {'friendly_name': 'Night'}),
+    });
+    // every corner drawn by a decoration on screen
+    Set<double> corners() => {
+          for (final c in tester.widgetList<Container>(find.byType(Container)))
+            if (c.decoration is BoxDecoration && (c.decoration as BoxDecoration).borderRadius is BorderRadius)
+              ((c.decoration as BoxDecoration).borderRadius as BorderRadius).topLeft.x,
+        };
+    Future<Set<double>> render(Map<String, dynamic> cfg) async {
+      await tester.pumpWidget(_app(SizedBox(width: 440, child: buildCard(cfg, env))));
+      await tester.pump();
+      return corners();
+    }
+
+    final light = {'type': 'custom:nspanel-light-card', 'entity': 'light.desk', 'height': 140, 'fill_direction': 'horizontal'};
+    expect(await render(light), containsAll([22.0, 20.0, 16.0]));
+    final small = await render({...light, 'radius': 8});
+    expect(small, containsAll([8.0, closeTo(20 * 8 / 22, .001), closeTo(16 * 8 / 22, .001)]));
+    expect(small, isNot(contains(22.0)), reason: 'nothing keeps the default corner');
+
+    final buttons = {'type': 'custom:nspanel-button-card', 'buttons': [{'entity': 'script.night'}], 'radius': 0};
+    expect(await render(buttons), everyElement(0.0), reason: 'square card, square buttons');
+    expect(await render({...light, 'radius': 99}), contains(40.0), reason: 'clamped to 40');
+    await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());
   });
 }

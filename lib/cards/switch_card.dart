@@ -142,7 +142,7 @@ class _SwitchCardState extends State<SwitchCard> {
         child: Container(
           decoration: BoxDecoration(
             color: on ? accent.withValues(alpha: .16) : Ns.surface2,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: CardRadius.inner(context, 18),
           ),
           padding: const EdgeInsets.all(8),
           child: Column(

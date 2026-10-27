@@ -171,7 +171,7 @@ class _FillCardState extends State<FillCard> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Ns.surface,
-            borderRadius: BorderRadius.circular(Ns.radius),
+            borderRadius: CardRadius.card(context),
           ),
           child: Stack(
             fit: StackFit.expand,
@@ -267,7 +267,7 @@ class _FillCardState extends State<FillCard> {
                   Flexible(
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
-                      decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 20)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -291,7 +291,7 @@ class _FillCardState extends State<FillCard> {
                     Container(
                       margin: const EdgeInsets.only(left: 12),
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                      decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(16)),
+                      decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 16)),
                       child: widget.value,
                     ),
                 ],
@@ -433,7 +433,7 @@ class IconBox extends StatelessWidget {
       height: 52,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: on ? .16 : .10),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: CardRadius.inner(context, 16),
       ),
       child: path != null
           ? Center(child: PathIcon(path, size: 30, color: color ?? Ns.text))
@@ -497,7 +497,7 @@ class _Chip extends StatelessWidget {
           child: Container(
             height: 56,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: bg, borderRadius: CardRadius.inner(context, 14)),
             child: spec.icon != null && spec.label.isEmpty
                 ? Icon(spec.icon, size: 26, color: Colors.white)
                 : Text(spec.label,

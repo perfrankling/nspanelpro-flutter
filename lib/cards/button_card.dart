@@ -259,7 +259,7 @@ class _ButtonCardState extends State<ButtonCard> {
         child: Container(
           decoration: BoxDecoration(
             color: paint?.bg ?? (hot ? accent.withValues(alpha: .16) : Ns.surface2),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: CardRadius.inner(context, 18),
           ),
           padding: EdgeInsets.all(cols == 4 ? 6 : 8),
           child: LayoutBuilder(

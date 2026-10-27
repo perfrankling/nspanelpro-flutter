@@ -35,3 +35,33 @@ class Ns {
         highlightColor: Colors.transparent,
       );
 }
+
+/// A card's `radius`: its corner in px, 0-40, 22 (the design's) when the card
+/// does not set one. The rounded things inside a card - icon box, plates,
+/// chips, buttons, album art - were drawn against 22 and scale with it, so a
+/// button never ends up rounder than the card around it. Same rule as the web
+/// card's --ns-rk. The sheet and the keypad are not cards and keep their own.
+class CardRadius extends InheritedWidget {
+  const CardRadius({super.key, required this.radius, required super.child});
+  final double radius;
+
+  /// The card's corner.
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CardRadius>()?.radius ?? Ns.radius;
+
+  /// The card's own outline.
+  static BorderRadius card(BuildContext context) => BorderRadius.circular(of(context));
+
+  /// A shape inside the card, given its radius at the default 22.
+  static BorderRadius inner(BuildContext context, double r) =>
+      BorderRadius.circular(r * of(context) / Ns.radius);
+
+  /// `radius` from a card's config, or null for the default.
+  static double? fromConfig(Object? v) {
+    final n = v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
+    return n?.clamp(0, 40).toDouble();
+  }
+
+  @override
+  bool updateShouldNotify(CardRadius old) => old.radius != radius;
+}

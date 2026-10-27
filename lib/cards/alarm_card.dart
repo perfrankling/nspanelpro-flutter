@@ -266,7 +266,7 @@ class _Btn extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          decoration: BoxDecoration(color: Ns.surface2, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Ns.surface2, borderRadius: CardRadius.inner(context, 16)),
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

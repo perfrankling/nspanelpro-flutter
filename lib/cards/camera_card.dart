@@ -164,7 +164,7 @@ class _CameraCardState extends State<CameraCard> {
         return Container(
           height: height,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: Ns.surface, borderRadius: BorderRadius.circular(Ns.radius)),
+          decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.card(context)),
           child: LayoutBuilder(builder: (context, box) {
             _size = Size(box.maxWidth.isFinite ? box.maxWidth : 480, height);
             return Stack(

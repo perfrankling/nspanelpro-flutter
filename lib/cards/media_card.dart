@@ -217,7 +217,7 @@ class _MediaCardState extends State<MediaCard> with EchoMixin {
         Widget leading;
         if (art != null) {
           leading = ClipRRect(
-            borderRadius: BorderRadius.circular(horizontal ? 12 : 14),
+            borderRadius: CardRadius.inner(context, horizontal ? 12 : 14),
             child: Image.network(
               widget.env.settings.resolve(art),
               width: artSize,

@@ -158,7 +158,7 @@ class _WeatherCardState extends State<WeatherCard> {
       padding: const EdgeInsets.fromLTRB(2, 8, 2, 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: CardRadius.inner(context, 12),
       ),
       child: Column(
         children: [
