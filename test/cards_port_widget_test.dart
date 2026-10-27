@@ -428,4 +428,44 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());
   });
+  testWidgets('sensors: a clock item shows the panel time, beside the sensors; no tap, no leak', (tester) async {
+    final (fake, env, conn) = await _house({
+      'sensor.out': st('sensor.out', '20.4', {'friendly_name': 'Out', 'unit_of_measurement': '°C'}),
+    });
+    String two(int n) => n.toString().padLeft(2, '0');
+    Future<void> show(List<Object> entities) async {
+      await tester.pumpWidget(_app(SizedBox(
+        width: 456,
+        child: buildCard({'type': 'custom:nspanel-sensors-card', 'show_icons': false, 'entities': entities}, env),
+      )));
+      await tester.pump();
+    }
+
+    await show([
+      {'entity': 'sensor.out', 'name': 'Outside'},
+      {'clock': true},
+    ]);
+    expect(find.text('Outside'), findsOneWidget);
+    expect(find.text('Time'), findsOneWidget, reason: 'the default label');
+    final now = DateTime.now();
+    final shown = tester.widgetList<Text>(find.byType(Text)).map((t) => t.textSpan?.toPlainText() ?? t.data).join('|');
+    final a = '${two(now.hour)}:${two(now.minute)}';
+    final b = '${two(now.add(const Duration(minutes: 1)).hour)}:${two(now.add(const Duration(minutes: 1)).minute)}';
+    expect(shown.contains(a) || shown.contains(b), isTrue, reason: 'panel time $a in "$shown"');
+
+    fake.calls.clear();
+    await tester.tap(find.text('Time'));
+    await tester.pump();
+    expect(fake.calls, isEmpty, reason: 'a clock item has nothing to open');
+
+    // 12 hours, seconds, an empty label
+    await show([{'clock': true, 'hour_24': false, 'show_seconds': true, 'name': ''}]);
+    final twelve = tester.widgetList<Text>(find.byType(Text)).map((t) => t.textSpan?.toPlainText() ?? t.data).join('|');
+    expect(twelve, matches(RegExp(r'\d{1,2}:\d{2}:\d{2}(am|pm)')));
+    expect(find.text('Time'), findsNothing, reason: "name: '' is an empty label");
+
+    // removing the card cancels its timer (a pending one fails the test)
+    await tester.pumpWidget(const SizedBox());
+    unawaited(conn.dispose());
+  });
 }
