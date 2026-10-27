@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../config/dashboard.dart';
+import '../ha/connection.dart';
 import '../ha/history.dart';
 import '../ha/states.dart';
 import '../ui/graph.dart';
@@ -37,6 +38,7 @@ class _GraphCardState extends State<GraphCard> {
   bool _failed = false;
   bool _fetching = false;
   Timer? _next;
+  int _fails = 0;
 
   bool get _active => _scope?.active ?? true;
   int get _hours => c.intOr('hours', 24).clamp(1, 168);
@@ -68,6 +70,22 @@ class _GraphCardState extends State<GraphCard> {
   /// would overlap into a smudge - unless show_minmax says otherwise.
   bool _band(int count) => c['show_minmax'] is bool ? c['show_minmax'] as bool : count == 1;
 
+  // The dashboard is drawn from its cached config before Home Assistant has
+  // answered, so the first request can go out before the connection is up.
+  // When it comes up, a card still without a graph asks again at once.
+  @override
+  void initState() {
+    super.initState();
+    widget.env.conn.status.addListener(_online);
+  }
+
+  void _online() {
+    if (widget.env.conn.status.value != HaStatus.online || _series != null || _fetching) return;
+    _next?.cancel();
+    _next = null;
+    _sync();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -83,6 +101,7 @@ class _GraphCardState extends State<GraphCard> {
 
   @override
   void dispose() {
+    widget.env.conn.status.removeListener(_online);
     _changes?.removeListener(_sync);
     _next?.cancel();
     super.dispose();
@@ -121,11 +140,20 @@ class _GraphCardState extends State<GraphCard> {
           _failed = false;
         });
       }
+      _fails = 0;
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      // "No history" only when HA itself answered; not connected yet is not
+      // an answer, and the status listener asks again when it is
+      final online = widget.env.conn.status.value == HaStatus.online;
+      if (mounted && online) setState(() => _failed = true);
+      _fails++;
     } finally {
       _fetching = false;
-      if (mounted && _active) _next = Timer(const Duration(minutes: 5), _fetch);
+      // after a failure: 10 s, 20 s, 40 s ... up to the usual five minutes
+      final wait = _fails == 0
+          ? const Duration(minutes: 5)
+          : Duration(seconds: (10 << (_fails - 1).clamp(0, 5)).clamp(10, 300));
+      if (mounted && _active) _next = Timer(wait, _fetch);
     }
   }
 

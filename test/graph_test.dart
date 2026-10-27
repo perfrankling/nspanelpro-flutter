@@ -198,4 +198,40 @@ void main() {
     expect(graphColour(null, 1, accent), isNot(accent));
     expect(graphColour(const Color(0xFFFF0000), 1, accent), const Color(0xFFFF0000));
   });
+  testWidgets('graph card built before HA answers: no "no history", and it asks again when HA comes up',
+      (tester) async {
+    // as on the panel at start: the dashboard is drawn from the cached
+    // config while the connection is still being made
+    final fake = FakeHa({
+      'sensor.out': st('sensor.out', '9.5', {'friendly_name': 'Out', 'unit_of_measurement': '°C'}),
+    });
+    fake.statistics['sensor.out'] = _stats(9.5);
+    final states = HaStates();
+    final conn = HaConnection(transportFactory: () async => fake, token: 'good', states: states);
+    final env = PanelEnv(states: states, conn: conn, settings: Settings(url: 'http://x', token: 't'));
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SizedBox(width: 456, child: buildCard({'type': 'custom:nspanel-graph-card', 'entity': 'sensor.out'}, env)),
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('No history from Home Assistant'), findsNothing, reason: 'not connected is not an answer');
+
+    await tester.runAsync(() async {
+      final ready = Completer<void>();
+      conn.onReady = ready.complete;
+      await conn.start();
+      await ready.future.timeout(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(_types(fake, 'recorder/statistics_during_period'), ['[sensor.out] 5minute'],
+        reason: 'asked again the moment HA came online, not five minutes later');
+    expect(find.text('No history from Home Assistant'), findsNothing);
+    expect(find.textContaining('↑'), findsOneWidget, reason: 'the graph is there: its high and low');
+
+    await tester.pumpWidget(const SizedBox());
+    unawaited(conn.dispose());
+  });
 }
