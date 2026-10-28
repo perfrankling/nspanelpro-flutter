@@ -57,20 +57,21 @@ class SensorsCard extends StatelessWidget {
   Widget _cell(BuildContext context, CardConfig item, bool showIcons) {
     if (item['clock'] == true) return _LocalTime(item: item, showIcons: showIcons);
     final id = item.str('entity') ?? '';
-    // long-press a reading: its last hours, full-screen
+    // a reading's last hours, full-screen: on a long-press, and on a tap - the
+    // app's stand-in for the more-info dialog a tap opens in the browser
+    void graph() => showGraphView(context, env: env, items: [
+          GraphItem(
+            entity: id,
+            name: item.str('name') ?? friendlyName(env.states.get(id), id),
+            color: parseHex(config.str('accent')) ?? Ns.sky,
+            unit: item.str('unit'),
+            decimals: item['decimals'] as int?,
+          ),
+        ]);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onLongPress: config.str('long_press') == 'none'
-          ? null
-          : () => showGraphView(context, env: env, items: [
-                GraphItem(
-                  entity: id,
-                  name: item.str('name') ?? friendlyName(env.states.get(id), id),
-                  color: parseHex(config.str('accent')) ?? Ns.sky,
-                  unit: item.str('unit'),
-                  decimals: item['decimals'] as int?,
-                ),
-              ]),
+      onTap: config.boolOr('more_info', true) ? graph : null,
+      onLongPress: config.str('long_press') == 'none' ? null : graph,
       child: _reading(item, id, showIcons),
     );
   }

@@ -175,13 +175,15 @@ void main() {
     unawaited(conn.dispose());
   });
 
-  testWidgets('long_press: none leaves the sensor card alone', (tester) async {
+  testWidgets('long_press: none and more_info: false leave the sensor card alone', (tester) async {
     final (fake, env, conn) = await _house({
       'sensor.out': st('sensor.out', '9.5', {'friendly_name': 'Out'}),
     });
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: buildCard({'type': 'custom:nspanel-sensor-card', 'entity': 'sensor.out', 'long_press': 'none'}, env),
+        body: buildCard(
+            {'type': 'custom:nspanel-sensor-card', 'entity': 'sensor.out', 'long_press': 'none', 'more_info': false},
+            env),
       ),
     ));
     await tester.pump();
@@ -230,6 +232,48 @@ void main() {
         reason: 'asked again the moment HA came online, not five minutes later');
     expect(find.text('No history from Home Assistant'), findsNothing);
     expect(find.textContaining('↑'), findsOneWidget, reason: 'the graph is there: its high and low');
+
+    await tester.pumpWidget(const SizedBox());
+    unawaited(conn.dispose());
+  });
+  testWidgets('a tap opens the graph too - the app has no more-info; more_info: false turns that off',
+      (tester) async {
+    final (_, env, conn) = await _house({
+      'sensor.out': st('sensor.out', '9.5', {'friendly_name': 'Out', 'unit_of_measurement': '°C'}),
+    });
+    await tester.binding.setSurfaceSize(const Size(480, 480));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    Future<bool> tapOpens(Map<String, dynamic> cfg, Finder target) async {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SizedBox(width: 456, child: buildCard(cfg, env)))));
+      await tester.pump();
+      await tester.tap(target);
+      await tester.pump(const Duration(milliseconds: 300));
+      final open = find.text('7 d').evaluate().isNotEmpty;
+      if (open) {
+        await tester.tap(find.byIcon(Icons.close));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+      return open;
+    }
+
+    final sensor = {'type': 'custom:nspanel-sensor-card', 'entity': 'sensor.out', 'height': 140};
+    expect(await tapOpens(sensor, find.text('Out')), isTrue);
+    expect(await tapOpens({...sensor, 'more_info': false}, find.text('Out')), isFalse);
+    final sensors = {
+      'type': 'custom:nspanel-sensors-card',
+      'show_icons': false,
+      'entities': [
+        {'entity': 'sensor.out', 'name': 'Outside'},
+        {'clock': true},
+      ],
+    };
+    expect(await tapOpens(sensors, find.text('Outside')), isTrue);
+    expect(await tapOpens(sensors, find.text('Time')), isFalse, reason: 'the clock reading has no history');
+    final graph = {'type': 'custom:nspanel-graph-card', 'entity': 'sensor.out', 'height': 200};
+    expect(await tapOpens(graph, find.text('24 h')), isTrue);
+    expect(await tapOpens({...graph, 'more_info': false}, find.text('24 h')), isFalse);
 
     await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());

@@ -171,16 +171,14 @@ class _GraphCardState extends State<GraphCard> {
             ? null
             : GraphLayout.of(_series!, _hours, [for (var i = 0; i < items.length; i++) (items[i].entity, values[i].$3)],
                 band: _band(items.length));
+        // full-screen: on a long-press, and on a tap - the app's stand-in for
+        // the more-info dialog a tap opens in the browser
+        void graph() => showGraphView(context,
+            env: env, items: items, title: c.str('title') ?? c.str('name'), hours: _hours, band: _band(items.length));
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onLongPress: c.str('long_press') == 'none' || items.isEmpty
-              ? null
-              : () => showGraphView(context,
-                  env: env,
-                  items: items,
-                  title: c.str('title') ?? c.str('name'),
-                  hours: _hours,
-                  band: _band(items.length)),
+          onTap: c.boolOr('more_info', true) && items.isNotEmpty ? graph : null,
+          onLongPress: c.str('long_press') == 'none' || items.isEmpty ? null : graph,
           child: InfoShell(
             height: height,
             accent: items.isEmpty ? Ns.sky : items.first.color,

@@ -59,20 +59,22 @@ class SensorCard extends StatelessWidget {
             ? 'Unavailable'
             : (sec != null ? '${friendlyName(sec, secondary!)} ${fmt(sec.numeric)}${sec.unit}' : '');
 
-        // long-press: this sensor's last hours, full-screen
+        // this sensor's last hours, full-screen: on a long-press, and on a tap,
+        // which in the browser opens HA's more-info - a dialog the app does
+        // not have, whose main content is the same history
+        void graph() => showGraphView(context, env: env, items: [
+              GraphItem(
+                entity: entity,
+                name: config.titleOr(friendlyName(s, entity)),
+                color: parseHex(config.str('accent')) ?? Ns.sky,
+                unit: config.str('unit'),
+                decimals: config['decimals'] as int?,
+              ),
+            ]);
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onLongPress: config.str('long_press') == 'none'
-              ? null
-              : () => showGraphView(context, env: env, items: [
-                    GraphItem(
-                      entity: entity,
-                      name: config.titleOr(friendlyName(s, entity)),
-                      color: parseHex(config.str('accent')) ?? Ns.sky,
-                      unit: config.str('unit'),
-                      decimals: config['decimals'] as int?,
-                    ),
-                  ]),
+          onTap: config.boolOr('more_info', true) ? graph : null,
+          onLongPress: config.str('long_press') == 'none' ? null : graph,
           child: InfoShell(
             height: config.numOr('height', 200),
             accent: accent,
