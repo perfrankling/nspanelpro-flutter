@@ -20,6 +20,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # pinned: the version the app is written and tested against (see
+          # CLAUDE.md). "Latest stable" let a new Flutter deprecate
+          # package:flutter/material.dart under us and fail the analyze step.
+          flutter-version: 3.47.7
           cache: true
 
       - run: flutter pub get
