@@ -214,7 +214,7 @@ class _MediaCardState extends State<MediaCard> with EchoMixin {
         final muted = logic.muted(s);
         final artSize = horizontal ? 52.0 : 76.0;
 
-        Widget leading;
+        Widget? leading;
         if (art != null) {
           leading = ClipRRect(
             borderRadius: CardRadius.inner(context, horizontal ? 12 : 14),
@@ -231,6 +231,8 @@ class _MediaCardState extends State<MediaCard> with EchoMixin {
           final name = c.str('icon') ?? s?.attr<String>('icon');
           leading = IconBox(mdi(name, _defaultIcon(s)), name: name, on: !idle && !broken);
         }
+        // show_icon: false drops the icon; album art is show_art's
+        final look = CardLook(c);
 
         // Button rows a horizontal card has no room for are left out,
         // transport first, favourites if there is still room.
@@ -249,14 +251,17 @@ class _MediaCardState extends State<MediaCard> with EchoMixin {
           on: !idle && !broken,
           broken: broken,
           opaqueChips: true,
-          leading: leading,
-          value: broken || idle || s.numAttr('volume_level') == null
+          plates: look.plates,
+          textColor: look.textColor,
+          leading: art != null || look.showIcon ? leading : null,
+          // show_value: false leaves the volume to the fill
+          value: broken || idle || s.numAttr('volume_level') == null || !look.showValue
               ? null
               : ValueText(
                   '$pct',
                   unit: '%',
                   // a muted player keeps its volume on show, in grey
-                  color: muted ? _mutedGrey : Ns.text,
+                  color: muted ? _mutedGrey : look.text,
                   caption: span < 1 ? '0–${(span * 100).round()}' : null,
                 ),
           title: lines.top,

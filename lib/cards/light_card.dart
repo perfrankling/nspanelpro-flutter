@@ -161,9 +161,12 @@ class _LightCardState extends State<LightCard> with EchoMixin {
             chipRowsThatFit(height, horizontal: horizontal) > 0;
         final iconName = c.str('icon') ?? s?.attr<String>('icon');
 
+        final look = CardLook(c);
         return FillCard(
           height: height,
           accent: logic.accent(s),
+          plates: look.plates,
+          textColor: look.textColor,
           horizontal: horizontal,
           solid: c.str('fill_style') == 'solid',
           fill: on && !broken ? v : 0,
@@ -171,14 +174,16 @@ class _LightCardState extends State<LightCard> with EchoMixin {
           on: on && !broken,
           broken: broken,
           dragTravel: c['drag_travel'] is num && c.numOr('drag_travel', 0) > 0 ? c.numOr('drag_travel', 0) : null,
-          leading: IconBox(
-            mdi(iconName, on ? MdiIcons.lightbulbOn : MdiIcons.lightbulbOutline),
-            name: iconName,
-            on: on,
-          ),
+          leading: look.showIcon
+              ? IconBox(
+                  mdi(iconName, on ? MdiIcons.lightbulbOn : MdiIcons.lightbulbOutline),
+                  name: iconName,
+                  on: on,
+                )
+              : null,
           // show_value: false leaves the big number and its plate out; the
           // state line under the name keeps the level
-          value: on && c.boolOr('show_value', true) ? ValueText('$pct', unit: '%') : null,
+          value: on && look.showValue ? ValueText('$pct', unit: '%', color: look.text) : null,
           title: c.titleOr(friendlyName(s, entity)),
           sub: broken ? 'Unavailable' : (on ? 'On · $pct%' : 'Off'),
           chips: showPresets

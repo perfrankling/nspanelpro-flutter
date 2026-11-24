@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../config/dashboard.dart';
 import '../util/color.dart';
 import '../util/custom_icons.dart';
 import 'theme.dart';
@@ -11,6 +12,23 @@ class ChipSpec {
   final IconData? icon;
   final VoidCallback onTap;
   final bool disabled;
+}
+
+/// The control cards' look options, read the way the web cards read them:
+/// show_icon, text_background (the plates behind the text in the horizontal
+/// layout), text_color (name, state line and value - not the icon, which says
+/// on or off) and show_value.
+class CardLook {
+  CardLook(CardConfig c)
+      : showIcon = c.boolOr('show_icon', true),
+        plates = c.boolOr('text_background', true),
+        showValue = c.boolOr('show_value', true),
+        textColor = parseColour(c.str('text_color'));
+  final bool showIcon, plates, showValue;
+  final Color? textColor;
+
+  /// The value's colour: text_color, or the usual white.
+  Color get text => textColor ?? Ns.text;
 }
 
 /// The control surface every "set a level" card is built on: a tinted block
@@ -41,6 +59,8 @@ class FillCard extends StatefulWidget {
     this.chips = const [],
     this.chips2 = const [],
     this.opaqueChips = false,
+    this.plates = true,
+    this.textColor,
     this.dragTravel,
     this.onTap,
     this.onLongPress,
@@ -76,6 +96,13 @@ class FillCard extends StatefulWidget {
   final List<ChipSpec> chips;
   final List<ChipSpec> chips2;
   final bool opaqueChips;
+
+  /// text_background: false - no plates behind the text sideways, so it sits
+  /// on the fill with only its shadow.
+  final bool plates;
+
+  /// text_color, for the name and the state line (the value is the card's).
+  final Color? textColor;
   final double? dragTravel;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -229,8 +256,8 @@ class _FillCardState extends State<FillCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
-                        Text(widget.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
+                        Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: _name),
+                        Text(widget.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: _sub),
                         if (widget.chips.isNotEmpty)
                           ChipRow(chips: widget.chips, on: widget.on, opaque: widget.opaqueChips),
                         if (widget.chips2.isNotEmpty)
@@ -246,6 +273,10 @@ class _FillCardState extends State<FillCard> {
       ),
     );
   }
+
+  TextStyle get _name => widget.textColor == null ? nameStyle : nameStyle.copyWith(color: widget.textColor);
+  TextStyle get _sub =>
+      widget.textColor == null ? subStyle : subStyle.copyWith(color: widget.textColor!.withValues(alpha: .72));
 
   /// The horizontal layout: icon and name on one plate, the value on another,
   /// both in the card's own colour so they only show where the fill runs under
@@ -266,20 +297,24 @@ class _FillCardState extends State<FillCard> {
                 children: [
                   Flexible(
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
-                      decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 20)),
+                      // no icon: the text needs the plate's own inset; no
+                      // plate: the text lines up with the card's padding
+                      padding: EdgeInsets.fromLTRB(
+                          !widget.plates ? 0 : (widget.leading == null ? 16 : 8), 8, widget.plates ? 16 : 0, 8),
+                      decoration: widget.plates
+                          ? BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 20))
+                          : null,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (widget.leading != null) widget.leading!,
-                          const SizedBox(width: 12),
+                          if (widget.leading != null) ...[widget.leading!, const SizedBox(width: 12)],
                           Flexible(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
-                                Text(widget.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle),
+                                Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: _name),
+                                Text(widget.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: _sub),
                               ],
                             ),
                           ),
@@ -290,8 +325,10 @@ class _FillCardState extends State<FillCard> {
                   if (widget.value != null)
                     Container(
                       margin: const EdgeInsets.only(left: 12),
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                      decoration: BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 16)),
+                      padding: EdgeInsets.fromLTRB(12, 4, widget.plates ? 12 : 0, 8),
+                      decoration: widget.plates
+                          ? BoxDecoration(color: Ns.surface, borderRadius: CardRadius.inner(context, 16))
+                          : null,
                       child: widget.value,
                     ),
                 ],

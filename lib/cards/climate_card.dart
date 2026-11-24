@@ -160,20 +160,31 @@ class _ClimateCardState extends State<ClimateCard> with EchoMixin {
         final target = _degrees(v, s);
         final showPresets = c.boolOr('show_presets', true) && presets.isNotEmpty;
 
+        final look = CardLook(c);
+        // show_value: false leaves the target out of the corner - and puts it
+        // in the state line, the one place it would otherwise be missing from
+        var sub = _stateText(s);
+        if (!look.showValue && !off && !broken) {
+          final set = ' · set ${fmt(target, 1)}°';
+          sub = sub.startsWith('Now ') ? sub.replaceFirst(' · ', '$set · ') : '$sub$set';
+        }
         return FillCard(
           height: c.numOr('height', 200),
           accent: parseHex(c.str('accent')) ?? Ns.ember,
+          textColor: look.textColor,
           fill: broken ? 0 : v,
           fillOpacity: off || broken ? 0 : 1,
           on: !off && !broken,
           broken: broken,
-          leading: IconBox(
-            mdi(c.str('icon') ?? s?.attr<String>('icon') ?? _hvacIcons[s?.state ?? 'off'], MdiIcons.thermostat),
-            on: !off && !broken,
-          ),
-          value: broken || off ? null : ValueText(fmt(target, 1), unit: '°'),
+          leading: look.showIcon
+              ? IconBox(
+                  mdi(c.str('icon') ?? s?.attr<String>('icon') ?? _hvacIcons[s?.state ?? 'off'], MdiIcons.thermostat),
+                  on: !off && !broken,
+                )
+              : null,
+          value: broken || off || !look.showValue ? null : ValueText(fmt(target, 1), unit: '°', color: look.text),
           title: c.titleOr(friendlyName(s, entity)),
-          sub: broken ? 'Unavailable' : _stateText(s),
+          sub: broken ? 'Unavailable' : sub,
           chips: showPresets
               ? [
                   for (final p in presets.take(4))

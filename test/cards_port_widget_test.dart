@@ -14,6 +14,7 @@ import 'package:nspanel_app/config/settings.dart';
 import 'package:nspanel_app/ha/connection.dart';
 import 'package:nspanel_app/ha/states.dart';
 import 'package:nspanel_app/ui/fill_card.dart';
+import 'package:nspanel_app/ui/theme.dart';
 import 'package:nspanel_app/util/color.dart';
 import 'package:nspanel_app/util/custom_icons.dart';
 
@@ -465,6 +466,63 @@ void main() {
     expect(find.text('Time'), findsNothing, reason: "name: '' is an empty label");
 
     // removing the card cancels its timer (a pending one fails the test)
+    await tester.pumpWidget(const SizedBox());
+    unawaited(conn.dispose());
+  });
+  testWidgets('show_icon, text_background, text_color and show_value on the control cards', (tester) async {
+    final (_, env, conn) = await _house({
+      'light.desk': st('light.desk', 'on', {'friendly_name': 'Desk', 'brightness': 128}),
+      'cover.blind': st('cover.blind', 'open', {'friendly_name': 'Blind', 'current_position': 62, 'supported_features': 15}),
+      'media_player.k': st('media_player.k', 'playing',
+          {'friendly_name': 'Kitchen', 'media_title': 'Song', 'media_artist': 'Band', 'volume_level': .34}),
+      'climate.trv': st('climate.trv', 'heat', {
+        'friendly_name': 'TRV', 'temperature': 21.5, 'current_temperature': 20.4, 'hvac_action': 'heating',
+        'min_temp': 5, 'max_temp': 30,
+      }),
+    });
+    Future<void> show(Map<String, dynamic> cfg) async {
+      await tester.pumpWidget(_app(SizedBox(width: 456, child: buildCard(cfg, env))));
+      await tester.pump();
+    }
+
+    // the plates: the two boxes in the card's own colour behind the text
+    int plates() => tester
+        .widgetList<Container>(find.byType(Container))
+        .where((c) => c.decoration is BoxDecoration && (c.decoration as BoxDecoration).color == Ns.surface)
+        .length;
+
+    final light = {'type': 'custom:nspanel-light-card', 'entity': 'light.desk', 'height': 120, 'fill_direction': 'horizontal'};
+    await show(light);
+    expect(find.byType(IconBox), findsOneWidget);
+    expect(find.byType(ValueText), findsOneWidget);
+    final withPlates = plates();
+
+    await show({...light, 'show_icon': false, 'text_background': false, 'text_color': 'black', 'show_value': false});
+    expect(find.byType(IconBox), findsNothing);
+    expect(find.byType(ValueText), findsNothing);
+    expect(plates(), withPlates - 2, reason: 'no box behind the name, none behind the value');
+    expect(tester.widget<Text>(find.text('Desk')).style!.color, const Color(0xFF000000));
+    expect(tester.widget<Text>(find.text('On · 50%')).style!.color!.a, closeTo(.72, .01), reason: 'the state line, dimmed');
+
+    await show({...light, 'text_color': '#ffd54a'});
+    expect(tester.widget<ValueText>(find.byType(ValueText)).color, const Color(0xFFFFD54A));
+
+    await show({'type': 'custom:nspanel-cover-card', 'entity': 'cover.blind', 'height': 240, 'show_value': false, 'show_icon': false});
+    expect(find.byType(ValueText), findsNothing);
+    expect(find.byType(IconBox), findsNothing);
+    expect(find.text('62% open'), findsOneWidget, reason: 'the level is still there');
+
+    await show({'type': 'custom:nspanel-media-card', 'entity': 'media_player.k', 'height': 240, 'show_value': false, 'show_icon': false});
+    expect(find.byType(ValueText), findsNothing);
+    expect(find.byType(IconBox), findsNothing);
+
+    final climate = {'type': 'custom:nspanel-climate-card', 'entity': 'climate.trv', 'height': 240};
+    await show(climate);
+    expect(find.text('Now 20.4° · Heating'), findsOneWidget);
+    await show({...climate, 'show_value': false});
+    expect(find.byType(ValueText), findsNothing);
+    expect(find.text('Now 20.4° · set 21.5° · Heating'), findsOneWidget, reason: 'the target moves into the line');
+
     await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());
   });

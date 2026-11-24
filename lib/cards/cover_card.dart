@@ -160,9 +160,12 @@ class _CoverCardState extends State<CoverCard> with EchoMixin {
             s?.attr<String>('icon') ??
             (pct >= 99 ? 'mdi:blinds-open' : (pct <= 0 ? 'mdi:blinds' : 'mdi:blinds-horizontal'));
 
+        final look = CardLook(c);
         return FillCard(
           height: height,
           accent: logic.accent,
+          plates: look.plates,
+          textColor: look.textColor,
           // The fill descends from the top, the way a blind actually does.
           // Sideways it comes in from the left, and dragging right brings it
           // down: the drag runs against the value, which is how open it is.
@@ -174,8 +177,9 @@ class _CoverCardState extends State<CoverCard> with EchoMixin {
           solid: c.str('fill_style') == 'solid',
           on: !broken && pct < 55,
           broken: broken,
-          leading: IconBox(mdi(icon), name: icon, on: !broken && pct < 55),
-          value: ValueText(broken ? '—' : '$pct', unit: broken ? '' : '%'),
+          leading: look.showIcon ? IconBox(mdi(icon), name: icon, on: !broken && pct < 55) : null,
+          // show_value: false - the state line says "62% open" anyway
+          value: look.showValue ? ValueText(broken ? '—' : '$pct', unit: broken ? '' : '%', color: look.text) : null,
           title: c.titleOr(friendlyName(s, entity)),
           sub: broken ? 'Unavailable' : logic.stateText(s, pct),
           chips: showPresets
