@@ -43,6 +43,7 @@ class SheetSpec {
     this.tilt,
     this.stepUp,
     this.stepDown,
+    this.stepTop,
   });
 
   final String title;
@@ -69,6 +70,10 @@ class SheetSpec {
   /// In place of the ± steps: a cover's tilt open / close.
   final SheetAction? stepUp;
   final SheetAction? stepDown;
+
+  /// A third button above the two, when the card hands one over: the media
+  /// card's mute, lit (primary) while the player is muted.
+  final SheetAction? stepTop;
 }
 
 const _mutedGrey = Color(0xFF8E939B);
@@ -240,6 +245,20 @@ class _SheetState extends State<_Sheet> {
                       width: 96,
                       child: Column(
                         children: [
+                          if (s.stepTop != null) ...[
+                            Expanded(
+                              child: _Square(
+                                color: s.stepTop!.primary ? s.accent : Ns.surface,
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  s.stepTop!.run();
+                                },
+                                child: Icon(s.stepTop!.icon,
+                                    color: s.stepTop!.primary ? Ns.ground : Ns.text, size: 40),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
                           _side(s.stepUp, s.step, Icons.add),
                           const SizedBox(height: 14),
                           _side(s.stepDown, -s.step, Icons.remove),

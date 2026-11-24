@@ -526,4 +526,49 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     unawaited(conn.dispose());
   });
+  testWidgets('media sheet: mute above the +, lit while muted; none on a player that cannot mute', (tester) async {
+    final (fake, env, conn) = await _house({
+      'media_player.k': st('media_player.k', 'playing', {
+        'friendly_name': 'Kitchen',
+        'volume_level': 0.34,
+        'supported_features': 4 | 8 | 1 | 16384,
+      }),
+      'media_player.tv': st('media_player.tv', 'playing',
+          {'friendly_name': 'TV', 'volume_level': 0.2, 'supported_features': 4 | 1 | 16384}),
+    });
+    await tester.pumpWidget(_app(MediaCard(config: {'entity': 'media_player.k', 'height': 300}, env: env)));
+    await tester.pump();
+    await tester.longPress(find.byType(MediaCard));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byIcon(MdiIcons.volumeHigh), findsOneWidget);
+    // above the +
+    expect(tester.getCenter(find.byIcon(MdiIcons.volumeHigh)).dy, lessThan(tester.getCenter(find.byIcon(Icons.add)).dy));
+
+    fake.calls.clear();
+    await tester.tap(find.byIcon(MdiIcons.volumeHigh));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(fake.calls, ['media_player.volume_mute {"entity_id":"media_player.k","is_volume_muted":true}']);
+
+    (fake.states['media_player.k']!['attributes'] as Map)['is_volume_muted'] = true;
+    fake.push('media_player.k');
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byIcon(MdiIcons.volumeOff), findsOneWidget, reason: 'muted: the crossed-out speaker');
+    final icon = tester.widget<Icon>(find.byIcon(MdiIcons.volumeOff));
+    expect(icon.color, Ns.ground, reason: 'lit: dark on the accent');
+    fake.calls.clear();
+    await tester.tap(find.byIcon(MdiIcons.volumeOff));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(fake.calls, ['media_player.volume_mute {"entity_id":"media_player.k","is_volume_muted":false}']);
+
+    await tester.tap(find.byIcon(Icons.close));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpWidget(_app(MediaCard(config: {'entity': 'media_player.tv', 'height': 300}, env: env)));
+    await tester.pump();
+    await tester.longPress(find.byType(MediaCard));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byIcon(MdiIcons.volumeHigh), findsNothing, reason: 'this player cannot mute');
+    unawaited(conn.dispose());
+  });
 }

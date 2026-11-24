@@ -127,6 +127,15 @@ class MediaLogic {
       accent: accent,
       step: c.numOr('step', 5),
       muted: muted(s),
+      // mute above the +, lit while muted - and a tap on the track still mutes
+      stepTop: (s?.supports(_volumeMute) ?? false)
+          ? SheetAction(
+              label: muted(s) ? 'Unmute' : 'Mute',
+              icon: muted(s) ? MdiIcons.volumeOff : MdiIcons.volumeHigh,
+              primary: muted(s),
+              run: () => call('volume_mute', {'is_volume_muted': !muted(state)}),
+            )
+          : null,
       onTap: (s?.supports(_volumeMute) ?? false)
           ? () => call('volume_mute', {'is_volume_muted': !muted(state)})
           : null,
